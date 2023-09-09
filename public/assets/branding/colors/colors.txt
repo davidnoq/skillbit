@@ -1,0 +1,3 @@
+Background (light): #fff
+Background (dark): #172530
+Accent: #008CFF
