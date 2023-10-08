@@ -2,26 +2,110 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+@font-face {
+  font-family: p;
+  src: url(../public/assets/fonts/Space_Grotesk/static/SpaceGrotesk-Regular.ttf);
 }
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+@font-face {
+  font-family: h1;
+  src: url(../public/assets/fonts/Space_Grotesk/static/SpaceGrotesk-Bold.ttf);
 }
-
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  font-family: p;
+  color: #fff;
+  font-size: 16px;
+}
+
+p {
+  font-family: p;
+  font-size: 16px;
+}
+
+h1 {
+  font-family: h1;
+  font-size: 24px;
+}
+
+button .arrow {
+  transition: 0.2s;
+}
+
+button:hover .arrow {
+  transform: translateX(5px);
+}
+
+.arrowMiddle {
+  width: 0px;
+  height: 2px;
+  background-color: #fff;
+  margin-right: -10px;
+  transition: 0.2s;
+  overflow: hidden;
+  margin-left: 16px;
+}
+
+button:hover .arrowMiddle {
+  width: 16px;
+  margin-left: 0;
+}
+
+.arrowSide {
+  rotate: 90deg;
+}
+
+.binary {
+  background-image: url(../public/assets/images/binary.png);
+  background-repeat: repeat;
+  background-size: cover;
+  opacity: 5%;
+  position: absolute;
+  top: 0;
+  bottom: -800px;
+  left: 50vw;
+  right: 0;
+}
+
+.mirror {
+  transform: scaleX(-1);
+}
+
+.demoBg {
+  background: linear-gradient(transparent, #18181b);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  border: 1px solid #ffffff2c;
+  transform: perspective(1000px) rotateY(-3deg); /* Apply perspective */
+  transition: transform 0.3s ease; /* Add a transition for smooth animation */
+  box-shadow: 0 10px 20px #00000038;
+}
+
+.demoBg:hover {
+  transform: perspective(1000px) rotateY(0deg); /* Remove the perspective effect on hover */
+}
+
+.graphPaper {
+  background-color: #18181b;
+  background-image: linear-gradient(#ffffff06 1px, transparent 1px),
+    linear-gradient(90deg, #ffffff06 1px, transparent 1px);
+  background-size: 40px 40px; /* Adjust the size of grid squares */
+}
+
+.meshGradient {
+  width: 800px;
+  height: 400px;
+  position: absolute;
+  left: calc(50vw - 200px);
+  top: 0px;
+  background: radial-gradient(#4f46e5, transparent 60%);
+  opacity: 0.2;
+}
+
+.meshGradient2 {
+  width: 800px;
+  height: 600px;
+  position: absolute;
+  left: calc(50vw - 50px);
+  top: 50px;
+  background: radial-gradient(#4f46e5, transparent 60%);
+  opacity: 0.2;
 }
