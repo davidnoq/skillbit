@@ -28,7 +28,7 @@ export default function Home() {
         <div className=" max-w-screen-xl m-auto">
           <Nav></Nav>
           <div className="meshGradient"></div>
-          <div className="meshGradient2"></div>
+          <div className="meshGradient2" style={{ marginLeft: "-6rem" }}></div>
           <div className="flex justify-between items-center flex-col gap-28 mt-28 relative z-10">
             <div className="">
               <p className="px-2 py-1 bg-indigo-600 bg-opacity-50 border border-indigo-600 border-opacity-50 w-fit rounded-lg m-auto">

@@ -7,7 +7,7 @@ import Nav from "@/components/nav";
 import Image from "next/image";
 import Arrow from "../../public/assets/icons/arrow.svg";
 import Demo from "../../public/assets/images/demo.png";
-import Logo from "../../public/assets/branding/logos/logo_mini_transparent_indigo.png";
+import Logo from "../../public/assets/branding/logos/logo_mini_transparent_white.png";
 
 //dashboard icons
 import DashboardIcon from "../../public/assets/icons/dashboard.svg";
@@ -26,7 +26,7 @@ const Dashboard = () => {
   return (
     <>
       <div className="max-w-screen text-white flex">
-        <div className="bg-white h-screen flex-1 max-w-xs border-gray-200 border-r p-6 relative">
+        <div className="bg-gray-800 h-screen flex-1 max-w-xs border-gray-600 border-r p-6 relative">
           <div className="flex items-center gap-2">
             <Image
               src={Logo}
@@ -35,7 +35,7 @@ const Dashboard = () => {
               height={110}
               style={{ margin: "-30px" }}
             ></Image>
-            <h1 className="text-indigo-600 text-3xl">Skillbit</h1>
+            <h1 className="text-white text-3xl">Skillbit</h1>
           </div>
           <div className="flex flex-col justify-between mt-6">
             <ul className="list-none text-gray-500 flex flex-col gap-2">
@@ -87,9 +87,9 @@ const Dashboard = () => {
             </ul> */}
           </div>
         </div>
-        <div className="bg-gray-50 h-screen flex-1">
-          <div className="bg-white border-b border-gray-200 flex justify-between p-3">
-            <div className="flex-1 max-w-xl bg-gray-100 p-2 rounded-lg flex justify-between">
+        <div className="bg-gray-900 h-screen flex-1">
+          <div className="bg-gray-800 border-b border-gray-700 flex justify-between p-3">
+            <div className="flex-1 max-w-xl bg-gray-200 p-2 rounded-lg flex justify-between">
               <input
                 className="text-gray-500 bg-transparent focus:outline-none w-full placeholder:text-gray-500"
                 placeholder="Search Anything..."
