@@ -40,23 +40,57 @@ const Auth = () => {
             }}
             className="flex flex-col gap-2 max-w-sm m-auto"
           >
-            <h1>Welcome Back!</h1>
-            <p className="text-gray-500 mb-10">
+            <motion.h1
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0 }}
+            >
+              Welcome Back!
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-gray-500 mb-10"
+            >
               Login to continue reimagining your technical interviews.
-            </p>
-            <p>Email</p>
-            <input
+            </motion.p>
+            <motion.p
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              Email
+            </motion.p>
+            <motion.input
               type="email"
               placeholder="mail@example.com"
               className="p-2 rounded-lg placeholder:text-gray-500 text-white bg-white bg-opacity-10"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
             />
-            <p>Password</p>
-            <input
+            <motion.p
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              Password
+            </motion.p>
+            <motion.input
               type="password"
               placeholder="Minimum 8 Characters"
               className="p-2 rounded-lg placeholder:text-gray-500 text-white bg-white bg-opacity-10"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
             />
-            <div className="flex justify-between">
+            <motion.div
+              className="flex justify-between"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.6 }}
+            >
               <div className="flex gap-2 items-center text-gray-500">
                 <input type="checkbox" className="bg-white bg-opacity-10" />
                 <p>Remember me</p>
@@ -64,8 +98,13 @@ const Auth = () => {
               <p className="text-gray-500">
                 <Link href={""}>Forgot your password?</Link>
               </p>
-            </div>
-            <button className="mt-10 w-full bg-indigo-600 px-6 py-3 rounded-lg flex justify-center items-center m-auto hover:bg-opacity-100 duration-200">
+            </motion.div>
+            <motion.button
+              className="mt-10 w-full bg-indigo-600 px-6 py-3 rounded-lg flex justify-center items-center m-auto hover:bg-opacity-100 duration-200"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.7 }}
+            >
               Login{" "}
               <div className=" arrow flex items-center justify-center">
                 <div className="arrowMiddle"></div>
@@ -79,10 +118,15 @@ const Auth = () => {
                   ></Image>
                 </div>
               </div>
-            </button>
-            <p className="text-gray-500">
+            </motion.button>
+            <motion.p
+              className="text-gray-500"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.8 }}
+            >
               No account yet? <Link href="">Create an account.</Link>
-            </p>
+            </motion.p>
           </form>
         </div>
         <motion.div
