@@ -38,6 +38,10 @@ input {
   font-family: p;
 }
 
+a {
+  text-decoration: underline;
+}
+
 .arrowMiddle {
   width: 0px;
   height: 2px;
@@ -83,12 +87,16 @@ button:hover .arrowMiddle {
   box-shadow: 0 10px 20px #00000038;
 }
 
+.loginAccentBackground {
+  background-color: #4f46e5;
+  background: radial-gradient(at 0 0, #4f46e5, #5a2cc6);
+}
+
 .demoBg:hover {
   transform: perspective(1000px) rotateY(0deg); /* Remove the perspective effect on hover */
 }
 
 .graphPaper {
-  background-color: #18181b;
   background-image: linear-gradient(#ffffff06 1px, transparent 1px),
     linear-gradient(90deg, #ffffff06 1px, transparent 1px);
   background-size: 40px 40px;
@@ -118,4 +126,20 @@ button:hover .arrowMiddle {
   top: 50px;
   background: radial-gradient(#4f46e5, transparent 60%);
   opacity: 0.2;
+}
+
+.meshGradient3 {
+  width: 800px;
+  height: 600px;
+  position: absolute;
+  left: 200px;
+  top: 50px;
+  background: radial-gradient(#4f46e5, transparent 60%);
+  opacity: 0.2;
+}
+
+@media (max-width: 1000px) {
+  .hideElement {
+    display: none;
+  }
 }

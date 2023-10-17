@@ -5,8 +5,11 @@ import Image from "next/image";
 import Arrow from "../public/assets/icons/arrow.svg";
 import Demo from "../public/assets/images/demo.png";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const router = useRouter();
+
   useEffect(() => {
     testExpressServer();
   }, []);
@@ -21,8 +24,8 @@ export default function Home() {
 
   return (
     <>
-      <div className="max-w-screen text-white graphPaper p-6 text-center">
-        <div className="max-w-screen-xl m-auto">
+      <div className="max-w-screen text-white graphPaper p-6 text-center bg-slate-900">
+        <div className=" max-w-screen-xl m-auto">
           <Nav></Nav>
           <div className="meshGradient"></div>
           <div className="meshGradient2"></div>
@@ -38,7 +41,10 @@ export default function Home() {
                 Take your company's technical recruitment to the next level with
                 Skillbit's AI-powered technical interview platform.
               </p>
-              <button className="mt-10 bg-indigo-600 bg-opacity-50 border border-indigo-600 border-opacity-50 px-6 py-3 rounded-lg flex justify-center items-center m-auto hover:bg-opacity-100 duration-200">
+              <button
+                onClick={() => router.push("/auth")}
+                className="mt-10 bg-indigo-600 bg-opacity-50 border border-indigo-600 border-opacity-50 px-6 py-3 rounded-lg flex justify-center items-center m-auto hover:bg-opacity-100 duration-200"
+              >
                 Get Started{" "}
                 <div className=" arrow flex items-center justify-center">
                   <div className="arrowMiddle"></div>
