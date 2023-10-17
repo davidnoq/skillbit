@@ -34,6 +34,10 @@ button:hover .arrow {
   transform: translateX(5px);
 }
 
+input {
+  font-family: p;
+}
+
 .arrowMiddle {
   width: 0px;
   height: 2px;
@@ -87,6 +91,12 @@ button:hover .arrowMiddle {
   background-color: #18181b;
   background-image: linear-gradient(#ffffff06 1px, transparent 1px),
     linear-gradient(90deg, #ffffff06 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.graphPaperWhite {
+  background-image: linear-gradient(#e5e7eb65 1px, transparent 1px),
+    linear-gradient(90deg, #e5e7eb65 1px, transparent 1px);
   background-size: 40px 40px; /* Adjust the size of grid squares */
 }
 

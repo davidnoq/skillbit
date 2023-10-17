@@ -24,7 +24,6 @@ export default function Home() {
       <div className="max-w-screen text-white graphPaper p-6 text-center">
         <div className="max-w-screen-xl m-auto">
           <Nav></Nav>
-          {/* <div className="binary"></div> */}
           <div className="meshGradient"></div>
           <div className="meshGradient2"></div>
           <div className="flex justify-between items-center flex-col gap-28 mt-28 relative z-10">
