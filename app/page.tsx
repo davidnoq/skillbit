@@ -1,6 +1,6 @@
 "use client";
 
-import Nav from "@/components/nav";
+import Nav from "@/components/nav/nav";
 import Image from "next/image";
 import Arrow from "../public/assets/icons/arrow.svg";
 import Demo from "../public/assets/images/demo.png";

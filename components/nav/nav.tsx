@@ -1,6 +1,6 @@
 import Image from "next/image";
-import Logo from "../public/assets/branding/logos/logo_mini_transparent_white.png";
-import Arrow from "../public/assets/icons/arrow.svg";
+import Logo from "../../public/assets/branding/logos/logo_mini_transparent_white.png";
+import Arrow from "../../public/assets/icons/arrow.svg";
 import { useRouter } from "next/navigation";
 
 const Nav = () => {

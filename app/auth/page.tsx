@@ -1,6 +1,6 @@
 "use client";
 
-import Nav from "@/components/nav";
+import Nav from "@/components/nav/nav";
 import Arrow from "../../public/assets/icons/arrow.svg";
 import Image from "next/image";
 import Link from "next/link";
@@ -131,7 +131,7 @@ const Auth = () => {
         </div>
         <motion.div
           whileHover={"hover"}
-          className="flex-1 loginAccentBackground h-screen p-6 flex items-center justify-center hideElement border-l border-slate-700 relative overflow-hidden"
+          className="flex-1 loginAccentBackground h-screen p-6 flex items-center justify-center hideElement border-l border-slate-700 relative overflow-hidden rounded-tl-3xl rounded-bl-3xl"
         >
           {/* TOP */}
           <motion.div
@@ -278,60 +278,16 @@ const Auth = () => {
           <div className="flex">
             <motion.div
               className="w-32 h-32 bg-white rounded-3xl rotate-45 -mr-2"
-              initial={{ scale: 1, rotate: 45 }}
-              variants={{
-                hover: {
-                  scale: 1,
-                },
-              }}
-              transition={{
-                duration: 0.5,
-                ease: "backInOut",
-              }}
+              initial={{ opacity: 0, y: 200, rotate: 0, scale: 0 }}
+              animate={{ opacity: 1, y: 0, rotate: 45, scale: 1 }}
+              transition={{ duration: 1, delay: 0, ease: "backInOut" }}
             ></motion.div>
             <motion.div
               className="w-32 h-32 bg-white rounded-3xl rotate-45 -ml-2"
-              initial={{ scale: 1, rotate: 45 }}
-              variants={{
-                hover: {
-                  scale: 1,
-                },
-              }}
-              transition={{
-                duration: 0.5,
-                ease: "backInOut",
-              }}
+              initial={{ opacity: 0, y: -200, rotate: 0, scale: 0 }}
+              animate={{ opacity: 1, y: 0, rotate: 45, scale: 1 }}
+              transition={{ duration: 1, delay: 0.2, ease: "backInOut" }}
             ></motion.div>
-            {/* <motion.div
-              initial={{ scale: 0.9 }}
-              variants={{
-                hover: {
-                  scale: 1.1,
-                },
-              }}
-              transition={{
-                duration: 0.5,
-                ease: "backInOut",
-              }}
-              className="w-48 h-48 -mr-24 z-10"
-            >
-              <Image src={LoginGraphic2} alt=""></Image>
-            </motion.div>
-            <motion.div
-              initial={{ scale: 0.9 }}
-              variants={{
-                hover: {
-                  scale: 1.2,
-                },
-              }}
-              transition={{
-                duration: 0.8,
-                ease: "backInOut",
-              }}
-              className="w-64 h-64 -mt-36"
-            >
-              <Image src={LoginGraphic1} alt=""></Image>
-            </motion.div> */}
           </div>
         </motion.div>
       </div>
