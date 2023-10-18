@@ -40,7 +40,7 @@ const Sidebar = () => {
           <div className="flex flex-col justify-between mt-6">
             <ul className="list-none text-white flex flex-col gap-2">
               {path == "/dashboard" && (
-                <li className="p-2 rounded-lg flex items-center gap-2 bg-indigo-600 bg-opacity-40 text-white shadow-lg border border-indigo-700">
+                <li className="p-2 rounded-lg flex items-center gap-2 bg-indigo-600 text-white shadow-lg">
                   <Image
                     src={DashboardIconWhite}
                     alt=""
