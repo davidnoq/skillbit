@@ -1,13 +1,15 @@
 const app = require("express")();
 const pty = require("node-pty");
 const server = require("http").createServer(app);
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+
 const options = {
-  cors: {
-    origin: "*",
-  },
-  port: 9999,
   shell: "bash",
+  port: 9999,
 };
+
 const io = require("socket.io")(server, {
   cors: {
     origin: "*",
@@ -19,10 +21,9 @@ let socket;
 let term = pty.fork(options.shell, [], {
   cols: 100,
   name: "xterm",
-  cwd: ".",
+  cwd: "/home/",
 });
 term.on("data", (data) => {
-  console.log(data);
   if (socket) socket.emit("data", Buffer.from(data, "utf-8"));
 });
 
@@ -33,6 +34,15 @@ io.on("connection", (s) => {
     term.write(data);
   });
 
+  socket.on("codeChange", (data) => {
+    const filePath = path.join("/home/", data.fileName);
+    console.log(filePath);
+    fs.writeFile(filePath, data.value, (err) => {
+      if (err) {
+        console.log(err);
+      }
+    });
+  });
   socket.on("disconnect", () => (socket = null));
 });
 
