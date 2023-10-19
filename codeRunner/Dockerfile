@@ -15,4 +15,7 @@ COPY package.json .
 RUN npm install
 COPY . .
 RUN npm rebuild node-pty
+WORKDIR /home
+RUN npx create-react-app project
+WORKDIR /server
 CMD ["node", "server.js"]

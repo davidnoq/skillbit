@@ -57,6 +57,8 @@ export default function CodeEditor() {
     await fetch("http://localhost:3000/api/codeEditor/start");
     const newSocket = io("http://localhost:9999");
     setSocket(newSocket);
+    socket.emit("data", "cd project\n");
+    socket.emit("data", "npm run start\n");
   }, []);
 
   useEffect(() => {
@@ -109,6 +111,7 @@ export default function CodeEditor() {
         onChange={handleEditorChange}
       />
       <div ref={terminalRef} style={{ height: "90%" }}></div>
+      <iframe src="http://localhost:9998"></iframe>
     </div>
   );
 }

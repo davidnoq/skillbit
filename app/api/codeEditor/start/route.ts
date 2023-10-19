@@ -8,12 +8,18 @@ export async function GET(req: Request) {
       Image: "skillbit",
       ExposedPorts: {
         "9999/tcp": {},
+        "3000/tcp": {},
       },
       HostConfig: {
         PortBindings: {
           "9999/tcp": [
             {
               HostPort: "9999",
+            },
+          ],
+          "3000/tcp": [
+            {
+              HostPort: "9998",
             },
           ],
         },
