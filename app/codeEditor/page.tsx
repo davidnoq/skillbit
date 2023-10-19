@@ -42,6 +42,10 @@ export default function CodeEditor() {
   const fitAddonRef = useRef(null);
   const [socket, setSocket] = useState(null);
 
+  const handleEditorChange = (value, event) => {
+    socket.emit("codeChange", { fileName, value });
+  };
+
   useEffect(async () => {
     termRef.current = new Terminal();
     fitAddonRef.current = new FitAddon();
@@ -57,6 +61,9 @@ export default function CodeEditor() {
 
   useEffect(() => {
     if (socket) {
+      Object.entries(files).forEach(([fileName, file]) => {
+        socket.emit("codeChange", { fileName, value: file.value });
+      });
       socket.on("data", (data) => {
         console.log(data);
         termRef.current.write(
@@ -99,6 +106,7 @@ export default function CodeEditor() {
         path={file.name}
         defaultLanguage={file.language}
         defaultValue={file.value}
+        onChange={handleEditorChange}
       />
       <div ref={terminalRef} style={{ height: "90%" }}></div>
     </div>
