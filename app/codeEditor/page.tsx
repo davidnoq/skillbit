@@ -82,8 +82,10 @@ export default function CodeEditor() {
     await fetch("http://localhost:3000/api/codeEditor/start");
     const newSocket = io("http://localhost:9999");
     setSocket(newSocket);
-    socket.emit("data", "cd project\n");
-    socket.emit("data", "npm run start\n");
+    if (socket) {
+      socket.emit("data", "cd project\n");
+      socket.emit("data", "npm run start\n");
+    }
   }, []);
 
   useEffect(() => {
@@ -107,38 +109,42 @@ export default function CodeEditor() {
   const file = files[fileName];
   return (
     <div className="max-w-screen text-white bg-slate-900 graphPaper min-h-screen flex items-center justify-center overflow-x-hidden">
-      <div className="flex flex-col space-y-2 px-4">
-        <button
-          disabled={fileName === "/project/src/App.js"}
-          onClick={() => setFileName("/project/src/App.js")}
-        >
-          script.js
-        </button>
-        <button
-          disabled={fileName === "style.css"}
-          onClick={() => setFileName("style.css")}
-        >
-          style.css
-        </button>
-        <button
-          disabled={fileName === "index.html"}
-          onClick={() => setFileName("index.html")}
-        >
-          index.html
-        </button>
+      <div className="w-3/4">
+        <div className="flex flex-row justify-between">
+          <button
+            disabled={fileName === "/project/src/App.js"}
+            onClick={() => setFileName("/project/src/App.js")}
+          >
+            script.js
+          </button>
+          <button
+            disabled={fileName === "style.css"}
+            onClick={() => setFileName("style.css")}
+          >
+            style.css
+          </button>
+          <button
+            disabled={fileName === "index.html"}
+            onClick={() => setFileName("index.html")}
+          >
+            index.html
+          </button>
+        </div>
+        <Editor
+          height="80vh"
+          theme="vs-dark"
+          path={file.name}
+          defaultLanguage={file.language}
+          defaultValue={file.value}
+          onChange={handleEditorChange}
+        />
       </div>
-      <Editor
-        height="80vh"
-        theme="vs-dark"
-        path={file.name}
-        defaultLanguage={file.language}
-        defaultValue={file.value}
-        onChange={handleEditorChange}
-      />
-      <div ref={terminalRef} style={{ height: "90%" }}></div>
-      <div className="flex flex-col">
-        <button onClick={() => setIframeKey(iframeKey + 1)}>Reload</button>
-        <iframe key={iframeKey} src="http://localhost:9998"></iframe>
+      <div>
+        <div ref={terminalRef} style={{ height: "90%" }}></div>
+        <div className="flex flex-col">
+          <button onClick={() => setIframeKey(iframeKey + 1)}>Reload</button>
+          <iframe key={iframeKey} src="http://localhost:9998"></iframe>
+        </div>
       </div>
     </div>
   );
