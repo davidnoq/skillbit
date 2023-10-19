@@ -1,7 +1,12 @@
 "use client";
 
 import Editor from "@monaco-editor/react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import React from "react";
+import { Socket, io } from "socket.io-client";
+import { Terminal } from "xterm";
+import { FitAddon } from "xterm-addon-fit";
+import "xterm/css/xterm.css";
 
 const files: {
   [key: string]: { name: string; language: string; value: string };
@@ -23,8 +28,47 @@ const files: {
   },
 };
 
+const xtermOptions = {
+  useStyle: true,
+  screenKeys: true,
+  cursorBlink: true,
+  cols: 100,
+};
+
 export default function CodeEditor() {
   const [fileName, setFileName] = useState("script.js");
+  const terminalRef = useRef(null);
+  const termRef = useRef(null);
+  const fitAddonRef = useRef(null);
+  const [socket, setSocket] = useState(null);
+
+  useEffect(async () => {
+    termRef.current = new Terminal();
+    fitAddonRef.current = new FitAddon();
+    termRef.current.loadAddon(fitAddonRef.current);
+    termRef.current.open(terminalRef.current);
+    fitAddonRef.current.fit();
+    termRef.current.focus();
+
+    await fetch("http://localhost:3000/api/codeEditor/start");
+    const newSocket = io("http://localhost:9999");
+    setSocket(newSocket);
+  }, []);
+
+  useEffect(() => {
+    if (socket) {
+      socket.on("data", (data) => {
+        console.log(data);
+        termRef.current.write(
+          String.fromCharCode.apply(null, new Uint8Array(data))
+        );
+      });
+
+      termRef.current.onData((data) => {
+        socket.emit("data", data);
+      });
+    }
+  }, [socket]);
 
   const file = files[fileName];
   return (
@@ -56,6 +100,7 @@ export default function CodeEditor() {
         defaultLanguage={file.language}
         defaultValue={file.value}
       />
+      <div ref={terminalRef} style={{ height: "90%" }}></div>
     </div>
   );
 }
