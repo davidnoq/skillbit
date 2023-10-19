@@ -11,10 +11,34 @@ import "xterm/css/xterm.css";
 const files: {
   [key: string]: { name: string; language: string; value: string };
 } = {
-  "script.js": {
-    name: "script.js",
+  "/project/src/App.js": {
+    name: "App.js",
     language: "javascript",
-    value: "console.log('hello')",
+    value: `import logo from './logo.svg';
+    import './App.css';
+    
+    function App() {
+      return (
+        <div className="App">
+          <header className="App-header">
+            <img src={logo} className="App-logo" alt="logo" />
+            <p>
+              Edit <code>src/App.js</code> and save to reload.
+            </p>
+            <a
+              className="App-link"
+              href="https://reactjs.org"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Learn React
+            </a>
+          </header>
+        </div>
+      );
+    }
+    
+    export default App;`,
   },
   "style.css": {
     name: "style.css",
@@ -36,11 +60,12 @@ const xtermOptions = {
 };
 
 export default function CodeEditor() {
-  const [fileName, setFileName] = useState("script.js");
+  const [fileName, setFileName] = useState("/project/src/App.js");
   const terminalRef = useRef(null);
   const termRef = useRef(null);
   const fitAddonRef = useRef(null);
   const [socket, setSocket] = useState(null);
+  const [iframeKey, setIframeKey] = useState(1);
 
   const handleEditorChange = (value, event) => {
     socket.emit("codeChange", { fileName, value });
@@ -84,8 +109,8 @@ export default function CodeEditor() {
     <div className="max-w-screen text-white bg-slate-900 graphPaper min-h-screen flex items-center justify-center overflow-x-hidden">
       <div className="flex flex-col space-y-2 px-4">
         <button
-          disabled={fileName === "script.js"}
-          onClick={() => setFileName("script.js")}
+          disabled={fileName === "/project/src/App.js"}
+          onClick={() => setFileName("/project/src/App.js")}
         >
           script.js
         </button>
@@ -111,7 +136,10 @@ export default function CodeEditor() {
         onChange={handleEditorChange}
       />
       <div ref={terminalRef} style={{ height: "90%" }}></div>
-      <iframe src="http://localhost:9998"></iframe>
+      <div className="flex flex-col">
+        <button onClick={() => setIframeKey(iframeKey + 1)}>Reload</button>
+        <iframe key={iframeKey} src="http://localhost:9998"></iframe>
+      </div>
     </div>
   );
 }
