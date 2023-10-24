@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import Nav from "@/components/nav/nav";
 import Image from "next/image";
@@ -23,6 +24,8 @@ import SettingsIcon from "../../public/assets/icons/settings.svg";
 
 const Sidebar = () => {
   const path = usePathname();
+
+const router = useRouter();
 
   return (
     <>
@@ -52,7 +55,7 @@ const Sidebar = () => {
                 </li>
               )}
               {path != "/dashboard" && (
-                <li className="p-2 rounded-lg flex items-center gap-2 hover:bg-slate-700 duration-100">
+                <li className="p-2 rounded-lg flex items-center gap-2 hover:bg-slate-700 duration-100" onClick={() => router.push('/dashboard')}>
                   <Image
                     src={DashboardIcon}
                     alt=""
@@ -74,7 +77,7 @@ const Sidebar = () => {
                 </li> 
               )}
               {path != "/applicants" && (
-                <li className="p-2 rounded-lg flex items-center gap-2 hover:bg-slate-700 duration-100">
+                <li className="p-2 rounded-lg flex items-center gap-2 hover:bg-slate-700 duration-100" onClick={() => router.push('/applicants')}>
                   <Image
                     src={ApplicantsIcon}
                     alt=""
@@ -96,7 +99,7 @@ const Sidebar = () => {
                 </li>
               )}
               {path != "/companyProfile" && (
-                <li className="p-2 rounded-lg flex items-center gap-2 hover:bg-slate-700 duration-100">
+                <li className="p-2 rounded-lg flex items-center gap-2 hover:bg-slate-700 duration-100" onClick={() => router.push('/companyProfile')}>
                   <Image
                     src={CompanyIcon}
                     alt=""
@@ -118,7 +121,7 @@ const Sidebar = () => {
                 </li>
               )}
               {path != "/questionWorkshop" && (
-                <li className="p-2 rounded-lg flex items-center gap-2 hover:bg-slate-700 duration-100">
+                <li className="p-2 rounded-lg flex items-center gap-2 hover:bg-slate-700 duration-100" onClick={() => router.push('/questionWorkshop')}>
                   <Image
                     src={WorkshopIcon}
                     alt=""
