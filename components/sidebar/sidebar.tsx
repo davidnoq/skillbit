@@ -43,7 +43,7 @@ const Sidebar = () => {
               {path == "/dashboard" && (
                 <li className="p-2 rounded-lg flex items-center gap-2 bg-indigo-600 text-white shadow-lg">
                   <Image
-                    src={DashboardIconWhite}
+                    src={DashboardIcon}
                     alt=""
                     width={25}
                     height={25}
@@ -62,23 +62,72 @@ const Sidebar = () => {
                   <p>Dashboard</p>
                 </li>
               )}
-              <li className="p-2 rounded-lg flex items-center gap-2 hover:bg-white hover:bg-opacity-10 duration-100">
-                <Image
-                  src={ApplicantsIcon}
-                  alt=""
-                  width={25}
-                  height={25}
-                ></Image>
-                <p>Applicants</p>
-              </li>
-              <li className="p-2 rounded-lg flex items-center gap-2 hover:bg-white hover:bg-opacity-10 duration-100">
-                <Image src={CompanyIcon} alt="" width={25} height={25}></Image>
-                <p>Company Profile</p>
-              </li>
-              <li className="p-2 rounded-lg flex items-center gap-2 hover:bg-white hover:bg-opacity-10 duration-100">
-                <Image src={WorkshopIcon} alt="" width={25} height={25}></Image>
-                <p>Question Workshop</p>
-              </li>
+              {path == "/applicants" && (
+                <li className="p-2 rounded-lg flex items-center gap-2 bg-indigo-600 text-white shadow-lg">
+                  <Image
+                    src={ApplicantsIcon}
+                    alt=""
+                    width={25}
+                    height={25}
+                  ></Image>
+                  <p>Applicants</p>
+                </li> 
+              )}
+              {path != "/applicants" && (
+                <li className="p-2 rounded-lg flex items-center gap-2 hover:bg-slate-700 duration-100">
+                  <Image
+                    src={ApplicantsIcon}
+                    alt=""
+                    width={25}
+                    height={25}
+                  ></Image>
+                  <p>Applicants</p>
+                </li>
+              )}
+              {path == "/companyProfile" && (
+                <li className="p-2 rounded-lg flex items-center gap-2 bg-indigo-600 text-white shadow-lg">
+                  <Image
+                    src={CompanyIcon}
+                    alt=""
+                    width={25}
+                    height={25}
+                  ></Image>
+                  <p>Company Profile</p>
+                </li>
+              )}
+              {path != "/companyProfile" && (
+                <li className="p-2 rounded-lg flex items-center gap-2 hover:bg-slate-700 duration-100">
+                  <Image
+                    src={CompanyIcon}
+                    alt=""
+                    width={25}
+                    height={25}
+                  ></Image>
+                  <p>Company Profile</p>
+                </li>
+              )}
+              {path == "/questionWorkshop" && (
+                <li className="p-2 rounded-lg flex items-center gap-2 bg-indigo-600 text-white shadow-lg">
+                  <Image
+                    src={WorkshopIcon}
+                    alt=""
+                    width={25}
+                    height={25}
+                  ></Image>
+                  <p>Question Workshop</p>
+                </li>
+              )}
+              {path != "/questionWorkshop" && (
+                <li className="p-2 rounded-lg flex items-center gap-2 hover:bg-slate-700 duration-100">
+                  <Image
+                    src={WorkshopIcon}
+                    alt=""
+                    width={25}
+                    height={25}
+                  ></Image>
+                  <p>Question Workshop</p>
+                </li>
+              )}
             </ul>
             <ul className="list-none text-white flex flex-col gap-2">
               <hr className="border-t border-slate-700" />
