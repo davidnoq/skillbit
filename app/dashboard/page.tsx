@@ -57,10 +57,11 @@ const Dashboard = () => {
       <div className="max-w-screen text-white flex overflow-x-hidden">
         <Sidebar></Sidebar>
         <div className="bg-slate-900 flex-1">
+          {/* Top menu bar */}
           <div className="bg-slate-800 border-b border-slate-700 flex justify-between p-3">
             <div className="flex-1 max-w-xl bg-white bg-opacity-5 p-2 rounded-lg flex justify-between border border-slate-700">
               <input
-                className="text-white bg-transparent focus:outline-none w-full placeholder:text-white"
+                className="text-white bg-transparent focus:outline-none w-full placeholder:text-white text-ellipsis"
                 placeholder="Search Anything..."
               ></input>
               <Image src={SearchIcon} alt="" width={25} height={25}></Image>
@@ -114,6 +115,8 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
+          {/* Dashboard content */}
+          <div className=""></div>
         </div>
       </div>
     </>

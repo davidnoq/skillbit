@@ -19,6 +19,7 @@ import WorkshopIcon from "../../public/assets/icons/workshop.svg";
 import ProfileIcon from "../../public/assets/icons/profile.svg";
 import QuestionIcon from "../../public/assets/icons/question.svg";
 import SearchIcon from "../../public/assets/icons/search.svg";
+import SettingsIcon from "../../public/assets/icons/settings.svg";
 
 const Sidebar = () => {
   const path = usePathname();
@@ -37,7 +38,7 @@ const Sidebar = () => {
             ></Image>
             <h1 className="text-white text-3xl">Skillbit</h1>
           </div>
-          <div className="flex flex-col justify-between mt-6">
+          <div className="flex flex-col justify-between mt-6 gap-2 absolute top-16 bottom-6 left-6 right-6 overflow-y-auto">
             <ul className="list-none text-white flex flex-col gap-2">
               {path == "/dashboard" && (
                 <li className="p-2 rounded-lg flex items-center gap-2 bg-indigo-600 text-white shadow-lg">
@@ -79,12 +80,17 @@ const Sidebar = () => {
                 <p>Question Workshop</p>
               </li>
             </ul>
-            {/* <ul className="list-none text-gray-500 flex flex-col gap-2">
-              <li className="p-2 rounded-lg flex items-center gap-2 hover:bg-indigo-100">
+            <ul className="list-none text-white flex flex-col gap-2">
+              <hr className="border-t border-slate-700" />
+              <li className="p-2 rounded-lg flex items-center gap-2 hover:bg-white hover:bg-opacity-10 duration-100">
                 <Image src={SupportIcon} alt="" width={25} height={25}></Image>
                 <p>Contact Support</p>
               </li>
-            </ul> */}
+              <li className="p-2 rounded-lg flex items-center gap-2 hover:bg-white hover:bg-opacity-10 duration-100">
+                <Image src={SettingsIcon} alt="" width={25} height={25}></Image>
+                <p>Manage Account</p>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
