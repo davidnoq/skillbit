@@ -33,6 +33,7 @@ import SearchIcon from "../../public/assets/icons/search.svg";
 import Edit from "../../public/assets/icons/edit.svg";
 
 interface Question {
+  candidatePrompt: string;
   title: string;
   language: string;
   framework: string;
@@ -72,6 +73,8 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
   const [framework, setFramework] = useState("");
   const [prompt, setPrompt] = useState("");
   const [newPrompt, setNewPrompt] = useState("");
+  const [candidatePrompt, setCandidatePrompt] = useState("");
+  const [newCandidatePrompt, setNewCandidatePrompt] = useState("");
   const [type, setType] = useState("");
   const [showQuestionOptions, setShowQuestionOptions] = useState("");
 
@@ -96,6 +99,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
       setCurrentQuestion(data.message[0]);
       setNewTitle(data.message[0].title);
       setNewPrompt(data.message[0].prompt);
+      setNewCandidatePrompt(data.message[0].candidatePrompt);
     } catch (error) {
       console.error("Error finding questions: ", error);
     }
@@ -151,6 +155,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
             id: id,
             title: newTitle,
             prompt: newPrompt,
+            candidatePrompt: newCandidatePrompt,
           }),
         });
         await findQuestions(userCompanyId || "");
@@ -298,6 +303,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                       setFramework("");
                       setPrompt("");
                       setType("");
+                      setCandidatePrompt("");
                     }}
                   >
                     <Image src={Plus} width={14} height={14} alt=""></Image>
@@ -317,6 +323,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                             setCurrentQuestion(question);
                             setNewTitle(question.title);
                             setNewPrompt(question.prompt);
+                            setNewCandidatePrompt(question.candidatePrompt)
                           }}
                           key={question.id}
                         >
@@ -466,6 +473,20 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                           </div>
                         </div>
                         <div className="flex flex-col mt-3">
+                          <h2>Candidate Prompt</h2>
+                          <p className="text-slate-400">
+                            {"Insert caption here."}
+                          </p>
+                          <textarea
+                            placeholder="Insert placeholder here..."
+                            className="p-2 rounded-lg placeholder:text-gray-500 text-white bg-slate-800 outline-none w-full mt-3 resize-y max-h-60 min-h-[100px] border border-slate-700"
+                            onChange={(e) =>
+                              setNewCandidatePrompt(e.target.value)
+                            }
+                            value={newCandidatePrompt}
+                          />
+                        </div>
+                        <div className="flex flex-col mt-3">
                           <h2>Template Prompt</h2>
                           <p className="text-slate-400">
                             {
@@ -510,7 +531,9 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                       <div className="">
                         <AnimatePresence>
                           {(currentQuestion.title != newTitle ||
-                            currentQuestion.prompt != newPrompt) && (
+                            currentQuestion.prompt != newPrompt ||
+                            currentQuestion.candidatePrompt != newCandidatePrompt
+                            ) && (
                             <motion.button
                               className="mt-10 w-full bg-indigo-600 px-6 py-3 rounded-lg flex justify-center items-center m-auto hover:bg-opacity-100"
                               initial={{ opacity: 0, y: 30 }}
