@@ -71,6 +71,55 @@ ExecStart=/usr/bin/dockerd -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock
 - Reload the daemon: `sudo systemctl daemon-reload`
 - Restart docker: `sudo systemctl restart docker`
 
+## Set up nginx
+
+- install nginx: `sudo yum install nginx`
+- `sudo nano /etc/nginx/conf.d/dynamic-ports.conf`
+- start nginx: `sudo systemctl start nginx`
+- paste this in the file:
+
+```
+server {
+    listen 80;
+    server_name api.skillbit.org 127.0.0.1;
+
+location ~ "^/(?<port>[1-9]\d{0,3})/?(?<restOfPath>.*)$" {
+    # Rewrite the URL to remove the port from the path.
+    # For example, /3001/socket.io/ becomes /socket.io/
+    rewrite "^/(?<port>[1-9]\d{0,3})/?(.*)$ /$2" break;
+
+    # Use HTTP/1.1 for WebSocket support.
+    proxy_http_version 1.1;
+
+    # Pass upgrade headers for WebSocket connections.
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+
+    # Forward the request to the backend, appending the original query string.
+    proxy_pass http://127.0.0.1:$port/$restOfPath$is_args$args;
+
+    # Pass along other headers.
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+location / {
+    proxy_pass http://127.0.0.1:3002$request_uri;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+}
+```
+
+- test: `sudo nginx -t`
+- reload: `sudo systemctl reload nginx`
+
+## Update DNS
+
 ## Other general commands
 
 - Remove all docker containers (active and inactive): `docker rm -v -f $(docker ps -qa)`

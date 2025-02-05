@@ -184,7 +184,7 @@ export default function Submissions({ params }: { params: { id: string } }) {
 
       const newSocket = io(
         DOCKER_EC2_TOGGLE
-          ? `http://54.225.167.48:${ports.socketServer}`
+          ? `https://api.skillbit.org/${ports.socketServer}`
           : `http://localhost:${ports.socketServer}`
       );
       setSocket(newSocket);
@@ -290,7 +290,7 @@ export default function Submissions({ params }: { params: { id: string } }) {
         try {
           const response = await fetch(
             DOCKER_EC2_TOGGLE
-              ? `http://54.225.167.48:${webServerPort}`
+              ? `https://api.skillbit.org/${webServerPort}`
               : `http://localhost:${webServerPort}`
           );
           if (response.ok) {
@@ -591,7 +591,7 @@ export default function Submissions({ params }: { params: { id: string } }) {
                 key={iframeKey}
                 src={
                   DOCKER_EC2_TOGGLE
-                    ? `http://54.225.167.48:${webServerPort}`
+                    ? `https://api.skillbit.org/${webServerPort}`
                     : `http://localhost:${webServerPort}`
                 }
               ></iframe>
@@ -701,7 +701,7 @@ export default function Submissions({ params }: { params: { id: string } }) {
 
 //     const newSocket = io(
 //       DOCKER_EC2_TOGGLE
-//         ? `http://54.225.167.48:${ports.socketServer}`
+//         ? `https://api.skillbit.org/${ports.socketServer}`
 //         : `http://localhost:${ports.socketServer}`
 //     );
 //     setSocket(newSocket);
@@ -762,7 +762,7 @@ export default function Submissions({ params }: { params: { id: string } }) {
 //         try {
 //           const response = await fetch(
 //             DOCKER_EC2_TOGGLE
-//               ? `http://54.225.167.48:${webServerPort}`
+//               ? `https://api.skillbit.org/${webServerPort}`
 //               : `http://localhost:${webServerPort}`
 //           );
 //           if (response.ok) {
@@ -1036,7 +1036,7 @@ export default function Submissions({ params }: { params: { id: string } }) {
 //                   key={iframeKey}
 //                   src={
 //                     DOCKER_EC2_TOGGLE
-//                       ? `http://54.225.167.48:${webServerPort}`
+//                       ? `https://api.skillbit.org/${webServerPort}`
 //                       : `http://localhost:${webServerPort}`
 //                   }
 //                 ></iframe>

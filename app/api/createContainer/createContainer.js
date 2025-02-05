@@ -6,10 +6,11 @@ async function createContainer(backendKey, containerName) {
   let docker;
   try {
     docker = new Docker({
-      host: "skillbit.org",
-      port: 443,
+      host: "api.skillbit.org",
       protocol: "https",
+      port: 444,
     });
+    console.log("docker:", docker);
   } catch (err) {
     console.error("Error creating/starting container:", err);
     return {
@@ -50,8 +51,13 @@ async function createContainer(backendKey, containerName) {
       return ports;
     }
 
-    const randomPort = Math.floor(Math.random() * 1000) + 3000;
-    const randomPort2 = Math.floor(Math.random() * 1000) + 3000;
+    // const randomPort = Math.floor(Math.random() * 1000) + 3000;
+    // const randomPort2 = Math.floor(Math.random() * 1000) + 3000;
+
+    //socket
+    const randomPort = 3001;
+    //react
+    const randomPort2 = 3002;
 
     const newContainer = await docker.createContainer({
       name: containerName,
