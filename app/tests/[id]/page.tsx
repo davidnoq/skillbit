@@ -248,7 +248,10 @@ export default function Tests({ params }: { params: { id: string } }) {
         newSocket.emit("data", "\n");
         newSocket.emit("data", "cd project\n");
         newSocket.emit("data", "npm install ajv@^6.12.6 ajv-keywords@^3.5.2\n");
-        newSocket.emit("data", `npm run start\n`);
+        newSocket.emit(
+          "data",
+          `PUBLIC_URL=/${ports.webServer} npm run start\n`
+        );
         for (const [fileKey, file] of Object.entries(filesState)) {
           newSocket.emit("codeChange", {
             fileName: fileKey,

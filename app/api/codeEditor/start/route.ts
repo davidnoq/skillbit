@@ -1,3 +1,5 @@
+//UNUSED FILE
+
 import createContainer from "../../createContainer/createContainer";
 import prisma from "../../database/prismaConnection";
 const Docker = require("dockerode");
@@ -118,9 +120,9 @@ export async function POST(req: Request) {
     // const randomPort2 = Math.floor(Math.random() * 1000) + 3000;
 
     //socket
-    const randomPort = 3001;
+    const randomPort = 0;
     //react
-    const randomPort2 = 3002;
+    const randomPort2 = 0;
 
     docker.createContainer(
       {

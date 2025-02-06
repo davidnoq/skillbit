@@ -83,35 +83,62 @@ server {
     listen 80;
     server_name api.skillbit.org 127.0.0.1;
 
-location ~ "^/(?<port>[1-9]\d{0,3})/?(?<restOfPath>.*)$" {
-    # Rewrite the URL to remove the port from the path.
-    # For example, /3001/socket.io/ becomes /socket.io/
-    rewrite "^/(?<port>[1-9]\d{0,3})/?(.*)$ /$2" break;
+    ## ODD PORTS – Socket endpoints
+    #
+    # Matches URLs like:
+    #   /3001/socket.io/...
+    # where 3001 is an odd-numbered port (4 digits, starting with 3).
+    #
+    location ~ "^/(?<port>3\d{2}[13579])/?(?<restOfPath>.*)$" {
+        # Strip the port from the beginning of the URI.
+        # For example: /3001/socket.io/  →  /socket.io/
+        rewrite "^/(?<port>3\d{2}[13579])/?(.*)$" /$2 break;
 
-    # Use HTTP/1.1 for WebSocket support.
-    proxy_http_version 1.1;
+        # For WebSocket support
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
 
-    # Pass upgrade headers for WebSocket connections.
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
+        # Forward the request to the backend on the given port.
+        proxy_pass http://127.0.0.1:$port/$restOfPath$is_args$args;
 
-    # Forward the request to the backend, appending the original query string.
-    proxy_pass http://127.0.0.1:$port/$restOfPath$is_args$args;
+        # Pass along common headers.
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
 
-    # Pass along other headers.
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-}
+    ## EVEN PORTS – React endpoints
+    #
+    # Two location blocks are used: one for requests with no extra path, and one
+    # for requests with additional path info.
 
-location / {
-    proxy_pass http://127.0.0.1:3002$request_uri;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-}
+    # Case 1: Exactly /<port>/ (no additional path)
+    location ~ "^/(?<port>3\d{2}[02468])/?$" {
+        proxy_pass http://127.0.0.1:$port/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Case 2: /<port>/<restOfPath> (with extra path)
+    location ~ "^/(?<port>3\d{2}[02468])/(?<restOfPath>.+)$" {
+        # The backend expects the port number to be repeated as the first part
+        # of the path. For example:
+        #   Request: /3002/about → Proxy to: http://127.0.0.1:3002/3002/about
+        proxy_pass http://127.0.0.1:$port/$port/$restOfPath$is_args$args;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    ## Catch-All: 404 if none of the above locations match.
+    location / {
+        return 404;
+    }
 }
 ```
 

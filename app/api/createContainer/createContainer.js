@@ -51,13 +51,8 @@ async function createContainer(backendKey, containerName) {
       return ports;
     }
 
-    // const randomPort = Math.floor(Math.random() * 1000) + 3000;
-    // const randomPort2 = Math.floor(Math.random() * 1000) + 3000;
-
-    //socket
-    const randomPort = 3001;
-    //react
-    const randomPort2 = 3002;
+    const socketServerPort = 3001 + 2 * Math.floor(Math.random() * 500);
+    const webServerPort = 3002 + 2 * Math.floor(Math.random() * 499);
 
     const newContainer = await docker.createContainer({
       name: containerName,
@@ -70,12 +65,12 @@ async function createContainer(backendKey, containerName) {
         PortBindings: {
           "9999/tcp": [
             {
-              HostPort: randomPort.toString(),
+              HostPort: socketServerPort.toString(),
             },
           ],
           "3000/tcp": [
             {
-              HostPort: randomPort2.toString(),
+              HostPort: webServerPort.toString(),
             },
           ],
         },
@@ -86,8 +81,8 @@ async function createContainer(backendKey, containerName) {
     console.log(newContainer.id);
 
     const ports = {
-      webServer: randomPort2,
-      socketServer: randomPort,
+      webServer: webServerPort,
+      socketServer: socketServerPort,
     };
 
     // console.log("PORTS:\n\n\n\n", JSON.stringify(ports))
