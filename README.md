@@ -120,6 +120,21 @@ location / {
 
 ## Update DNS
 
+- update to direct api.skillbit.org to the correct load balancer
+
+## Update security groups
+
+### Inbound
+
+- All traffic to My IP
+- All traffic to its own security group
+
+### Outbound
+
+- All traffic to My IP
+- All traffic to its own security group
+- HTTPS (port 443 will set automatically) to 0.0.0.0
+
 ## Other general commands
 
 - Remove all docker containers (active and inactive): `docker rm -v -f $(docker ps -qa)`
@@ -130,3 +145,4 @@ location / {
 - Start docker manually with desired hosts: `sudo dockerd -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock`
 
 - Remember to set elastic IP address on EC2 instance
+- Remember that you must start nginx whenever the instance shuts down and turns back on
