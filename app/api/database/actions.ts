@@ -777,7 +777,7 @@ export async function assignTemplate(
             attachments: [
               {
                 filename: "logo_full_transparent_blue.png",
-                path: "./public/assets/branding/logos/logo_full_transparent_blue.png",
+                path: "../../../public/assets/branding/logos/logo_full_transparent_blue.png",
                 cid: "logo1",
               },
             ],
@@ -888,7 +888,7 @@ export async function contactForm(
       attachments: [
         {
           filename: "logo_full_transparent_blue.png",
-          path: "./public/assets/branding/logos/logo_full_transparent_blue.png",
+          path: "../../../public/assets/branding/logos/logo_full_transparent_blue.png",
           cid: "logo1",
         },
       ],
