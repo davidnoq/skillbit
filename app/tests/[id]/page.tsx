@@ -73,6 +73,7 @@ export default function Tests({ params }: { params: { id: string } }) {
   const [webcontainerInstance, setWebcontainerInstance] = useState(null);
   const [socket, setSocket] = useState(null);
   const [iframeKey, setIframeKey] = useState(1);
+  const [webServerUrl, setWebServerUrl] = useState("");
   const [webServerPort, setWebServerPort] = useState(null);
   const [showTerminal, setShowTerminal] = useState(true);
   const [showBrowser, setShowBrowser] = useState(true);
@@ -261,26 +262,46 @@ export default function Tests({ params }: { params: { id: string } }) {
         });
 
         // Install dependencies and start the app
-        const installProcess = await instance.spawn("npm", ["install"]);
+        const installProcess = await instance.spawn("bash", [
+          "-c",
+          "y | npx create-react-app my-react-app",
+        ]);
+
         const installExitCode = await installProcess.exit;
+        console.log("Installed create-react-app");
+
+        const installWebVitals = await instance.spawn("bash", [
+          "-c",
+          "cd my-react-app && npm install web-vitals",
+        ]);
+        console.log("Installed web-vitals");
+
+        // Listen for server-ready event before starting the server
+        instance.on("server-ready", (port, url) => {
+          console.log("Server is ready on port:", port);
+          console.log("Server URL:", url);
+          setWebServerPort(port);
+          setWebServerUrl(url);
+          setIsAppReady(true);
+        });
+
+        const startServer = await instance.spawn("bash", [
+          "-c",
+          "cd my-react-app && npm start",
+        ]);
+        console.log("Started server");
 
         if (installExitCode !== 0) {
           throw new Error("Installation failed");
         }
 
-        // Start the development server
-        const startProcess = await instance.spawn("npm", ["start"]);
-
         setIsLoading(false);
-        setIsAppReady(true);
-        setWebServerPort(3000); // React's default port
       } catch (webContainerError) {
         console.error("WebContainer initialization error:", webContainerError);
         toast.error(
           "Failed to initialize WebContainer. Please try again or contact support."
         );
         setIsLoading(false);
-        // Don't redirect, just show the error state
       }
     } catch (error) {
       console.error("Detailed error in startEditor:", error);
@@ -821,7 +842,7 @@ export default function Tests({ params }: { params: { id: string } }) {
               <iframe
                 className="w-full h-full"
                 key={iframeKey}
-                src="http://localhost:3000"
+                src={webServerUrl || ""}
               />
             </motion.div>
           )}
