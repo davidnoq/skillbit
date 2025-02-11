@@ -276,6 +276,8 @@ export default function Tests({ params }: { params: { id: string } }) {
         ]);
         console.log("Installed web-vitals");
 
+        shellWriterRef.current?.write("cd my-react-app && npm start\n");
+
         // Copy the files into the React app structure
         for (const [key, fileData] of Object.entries(filesState)) {
           const filePath = `my-react-app/src/${fileData.name}`;
@@ -293,11 +295,11 @@ export default function Tests({ params }: { params: { id: string } }) {
         });
 
         // Start the development server
-        const startServer = await instance.spawn("bash", [
-          "-c",
-          "cd my-react-app && npm start",
-        ]);
-        console.log("Started server");
+        // const startServer = await instance.spawn("bash", [
+        //   "-c",
+        //   "cd my-react-app && npm start",
+        // ]);
+        // console.log("Started server");
 
         if (installExitCode !== 0) {
           throw new Error("Installation failed");
