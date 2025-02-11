@@ -1,152 +1,143 @@
 "use client";
 
+import React, { useEffect, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
-import { useState, useEffect, useRef } from "react";
-import React from "react";
-import { Socket, io } from "socket.io-client";
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
 
-const files: {
-  [key: string]: { name: string; language: string; value: string };
-} = {
-  "/project/src/App.js": {
-    name: "App.js",
-    language: "javascript",
-    value: `import logo from './logo.svg';
-    import './App.css';
-    
-    function App() {
-      return (
-        <div className="App">
-          <header className="App-header">
-            <img src={logo} className="App-logo" alt="logo" />
-            <p>
-              Edit <code>src/App.js</code> and save to reload.
-            </p>
-            <a
-              className="App-link"
-              href="https://reactjs.org"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learn React
-            </a>
-          </header>
-        </div>
-      );
-    }
-    
-    export default App;`,
-  },
-  "style.css": {
-    name: "style.css",
-    language: "css",
-    value: "body { background-color: red; }",
-  },
-  "index.html": {
-    name: "index.html",
-    language: "html",
-    value: "<h1>hello world</h1>",
-  },
-};
+// We'll need @webcontainer/api for the in-browser WebContainer:
+import { WebContainer } from "@webcontainer/api";
 
-const xtermOptions = {
-  useStyle: true,
-  screenKeys: true,
-  cursorBlink: true,
-  cols: 100,
-};
-
+// We might optionally keep or remove any styling references:
 export default function CodeEditor() {
-  // const [fileName, setFileName] = useState("/project/src/App.js");
-  // const terminalRef = useRef(null);
-  // const termRef = useRef(null);
-  // const fitAddonRef = useRef(null);
-  // const [socket, setSocket] = useState(null);
-  // const [iframeKey, setIframeKey] = useState(1);
+  const [webcontainerInstance, setWebcontainerInstance] = useState<any>(null);
 
-  // const handleEditorChange = (value, event) => {
-  //   socket.emit("codeChange", { fileName, value });
-  // };
+  // We'll store a reference to the monaco model's file name:
+  const [fileName, setFileName] = useState("/index.js");
+  const [fileContent, setFileContent] = useState<string>(`console.log("Hello WebContainer");`);
+  
+  // Terminal references:
+  const terminalRef = useRef<HTMLDivElement>(null);
+  const termRef = useRef<Terminal | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
+  
+  // Keep track of the shell process so we can write to it:
+  const shellWriterRef = useRef<WritableStreamDefaultWriter<string> | null>(null);
 
-  // useEffect(async () => {
-  //   termRef.current = new Terminal();
-  //   fitAddonRef.current = new FitAddon();
-  //   termRef.current.loadAddon(fitAddonRef.current);
-  //   termRef.current.open(terminalRef.current);
-  //   fitAddonRef.current.fit();
-  //   termRef.current.focus();
+  // Start the webcontainer only once:
+  useEffect(() => {
+    async function bootContainer() {
+      // Boot the container
+      const instance = await WebContainer.boot();
+      setWebcontainerInstance(instance);
 
-  //   // await fetch("http://localhost:3000/api/codeEditor/start");
-  //   // const newSocket = io("http://localhost:9999");
-  //   setSocket(newSocket);
-  //   if (socket) {
-  //     socket.emit("data", "cd project\n");
-  //     socket.emit("data", "npm run start\n");
-  //   }
-  // }, []);
+      // Next, mount initial files (in a real app we might want multiple)
+      await instance.mount({
+        "index.js": {
+          file: {
+            contents: fileContent,
+          },
+        },
+        "package.json": {
+          file: {
+            contents: JSON.stringify({
+              name: "in-browser-app",
+              type: "module",
+              dependencies: {
+                // e.g. "chalk": "latest"
+              },
+              scripts: {
+                start: "node index.js"
+              },
+            }, null, 2),
+          },
+        },
+      });
 
-  // useEffect(() => {
-  //   if (socket) {
-  //     Object.entries(files).forEach(([fileName, file]) => {
-  //       socket.emit("codeChange", { fileName, value: file.value });
-  //     });
-  //     socket.on("data", (data) => {
-  //       // console.log(data);
-  //       termRef.current.write(
-  //         String.fromCharCode.apply(null, new Uint8Array(data))
-  //       );
-  //     });
+      // Create the terminal
+      termRef.current = new Terminal({ convertEol: true });
+      fitAddonRef.current = new FitAddon();
+      termRef.current.loadAddon(fitAddonRef.current);
 
-  //     termRef.current.onData((data) => {
-  //       socket.emit("data", data);
-  //     });
-  //   }
-  // }, [socket]);
+      if (terminalRef.current) {
+        termRef.current.open(terminalRef.current);
+        fitAddonRef.current.fit();
+      }
 
-  // const file = files[fileName];
-  // return (
-  //   <div className="max-w-screen text-white bg-slate-900 graphPaper min-h-screen flex items-center justify-center overflow-x-hidden">
-  //     <div className="w-3/4">
-  //       <div className="flex flex-row justify-between">
-  //         <button
-  //           disabled={fileName === "/project/src/App.js"}
-  //           onClick={() => setFileName("/project/src/App.js")}
-  //         >
-  //           script.js
-  //         </button>
-  //         <button
-  //           disabled={fileName === "style.css"}
-  //           onClick={() => setFileName("style.css")}
-  //         >
-  //           style.css
-  //         </button>
-  //         <button
-  //           disabled={fileName === "index.html"}
-  //           onClick={() => setFileName("index.html")}
-  //         >
-  //           index.html
-  //         </button>
-  //       </div>
-  //       <Editor
-  //         height="80vh"
-  //         theme="vs-dark"
-  //         path={file.name}
-  //         defaultLanguage={file.language}
-  //         defaultValue={file.value}
-  //         onChange={handleEditorChange}
-  //       />
-  //     </div>
-  //     <div>
-  //       <div ref={terminalRef} style={{ height: "90%" }}></div>
-  //       <div className="flex flex-col">
-  //         <button onClick={() => setIframeKey(iframeKey + 1)}>Reload</button>
-  //         <iframe key={iframeKey} src="http://localhost:9998"></iframe>
-  //       </div>
-  //     </div>
-  //   </div>
-  // );
-  return <div className="">hi</div>;
+      // Start a shell, so user can run commands interactively:
+      const shellProcess = await instance.spawn("jsh", {
+        terminal: {
+          cols: termRef.current?.cols || 80,
+          rows: termRef.current?.rows || 24,
+        },
+      });
+
+      // Pipe shell output => Xterm
+      shellProcess.output.pipeTo(
+        new WritableStream({
+          write(data) {
+            termRef.current?.write(data);
+          }
+        })
+      );
+
+      // Store the writer
+      shellWriterRef.current = shellProcess.input.getWriter();
+
+      // When user types in the terminal => send data to webcontainer shell
+      termRef.current.onData((data) => {
+        shellWriterRef.current?.write(data);
+      });
+    }
+
+    bootContainer();
+  }, []);
+
+  // Resize terminal if window changes
+  useEffect(() => {
+    function handleResize() {
+      if (termRef.current && fitAddonRef.current) {
+        fitAddonRef.current.fit();
+        if (webcontainerInstance) {
+          // Optionally, if we had a shell process, we could call shellProcess.resize
+          // But for brevity, we'll skip that unless we store the process
+        }
+      }
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [webcontainerInstance]);
+
+  // When the code in the editor changes => update both local state and webcontainer:
+  function handleEditorChange(value?: string) {
+    if (!value || !webcontainerInstance) return;
+    setFileContent(value);
+    // Update the file in webcontainer:
+    webcontainerInstance.fs.writeFile("/index.js", value);
+  }
+
+  return (
+    <div className="max-w-screen text-white bg-slate-900 min-h-screen flex flex-col">
+      <div className="flex-1 flex">
+        {/* Left side: Editor */}
+        <div style={{ width: "50%", backgroundColor: "#1e1e1e" }}>
+          <Editor
+            height="100%"
+            width="100%"
+            theme="vs-dark"
+            path={fileName}
+            defaultLanguage="javascript"
+            defaultValue={fileContent}
+            onChange={handleEditorChange}
+          />
+        </div>
+
+        {/* Right side: Terminal */}
+        <div style={{ width: "50%", backgroundColor: "#000" }}>
+          <div ref={terminalRef} style={{ width: "100%", height: "100%" }}></div>
+        </div>
+      </div>
+    </div>
+  );
 }

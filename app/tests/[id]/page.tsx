@@ -38,6 +38,7 @@ const formatTime = (seconds) => {
 // Import react-hot-toast components
 import { toast, Toaster } from "react-hot-toast";
 import path from "path";
+import { WebContainer } from "@webcontainer/api";
 
 const DOCKER_EC2_TOGGLE = true;
 
@@ -69,6 +70,7 @@ export default function Tests({ params }: { params: { id: string } }) {
   const terminalRef = useRef(null);
   const termRef = useRef(null);
   const fitAddonRef = useRef(null);
+  const [webcontainerInstance, setWebcontainerInstance] = useState(null);
   const [socket, setSocket] = useState(null);
   const [iframeKey, setIframeKey] = useState(1);
   const [webServerPort, setWebServerPort] = useState(null);
@@ -82,6 +84,7 @@ export default function Tests({ params }: { params: { id: string } }) {
   const [timeLeft, setTimeLeft] = useState(null); // Initialized to null
   // const [file, setFile] = useState("");
   const file = filesState[fileName];
+  const shellWriterRef = useRef(null);
 
   const fetchFilesFromS3 = async () => {
     try {
@@ -100,17 +103,17 @@ export default function Tests({ params }: { params: { id: string } }) {
       const data = await response.json();
       const files = data.files;
 
-      // Assuming the response is an object where keys are file paths and values are file data
+      // Format files for WebContainer
       const formattedFiles = {};
       let firstFilename = "";
       let count = 0;
       for (const file of files) {
         const name = file.fileName.split("/").pop();
         if (count == 0) {
-          firstFilename = `/project/src/${name}`;
+          firstFilename = name;
         }
         count++;
-        formattedFiles[`/project/src/${name}`] = {
+        formattedFiles[name] = {
           name: name,
           value: file.content,
         };
@@ -123,15 +126,184 @@ export default function Tests({ params }: { params: { id: string } }) {
     }
   };
 
-  // Handle editor changes
-  const handleEditorChange = (value, event) => {
-    if (socket) {
-      socket.emit("codeChange", { fileName, value });
+  // Start the editor and initialize WebContainer
+  const startEditor = async () => {
+    try {
+      console.log("Starting editor with test ID:", params.id);
+      // Get test info first
+      const testResponse = await fetch("/api/database", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "getTestById",
+          id: params.id,
+        }),
+      });
+
+      const testData = await testResponse.json();
+      console.log("Test data response:", testData);
+
+      if (!testData.message) {
+        console.log("No test data found, redirecting to /not-found");
+        router.push("/not-found");
+        return;
+      }
+
+      // Set time if not already set
+      if (!testData.message.startTime) {
+        console.log("No start time, initializing test timer");
+        const startResponse = await fetch("/api/database", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "startTest",
+            testId: params.id,
+          }),
+        });
+        const startData = await startResponse.json();
+        console.log("Start test response:", startData);
+        const endTime = new Date(startData.message.endTime);
+        const currentTime = new Date();
+        const remainingTime = Math.floor(
+          (endTime.getTime() - currentTime.getTime()) / 1000
+        );
+        setTimeLeft(remainingTime);
+      } else {
+        console.log("Test already started, calculating remaining time");
+        const endTime = new Date(testData.message.endTime);
+        const currentTime = new Date();
+        const remainingTime = Math.floor(
+          (endTime.getTime() - currentTime.getTime()) / 1000
+        );
+        setTimeLeft(remainingTime);
+      }
+
+      try {
+        console.log("Booting WebContainer");
+        // Check for cross-origin isolation
+        if (!crossOriginIsolated) {
+          throw new Error(
+            "Cross-Origin Isolation is not enabled. Please refresh the page."
+          );
+        }
+
+        // Boot WebContainer
+        const instance = await WebContainer.boot();
+        setWebcontainerInstance(instance);
+
+        // Create project structure
+        await instance.fs.mkdir("src");
+
+        // Mount initial files
+        const files = {
+          "package.json": {
+            file: {
+              contents: JSON.stringify(
+                {
+                  name: "test-project",
+                  type: "module",
+                  dependencies: {
+                    react: "^18.2.0",
+                    "react-dom": "^18.2.0",
+                    "react-scripts": "5.0.1",
+                    ajv: "^6.12.6",
+                    "ajv-keywords": "^3.5.2",
+                  },
+                  scripts: {
+                    start: "react-scripts start",
+                  },
+                },
+                null,
+                2
+              ),
+            },
+          },
+        };
+
+        // Add source files to src directory
+        for (const [key, fileData] of Object.entries(filesState)) {
+          files[`${fileData.name}`] = {
+            file: {
+              contents: fileData.value,
+            },
+          };
+        }
+
+        await instance.mount(files);
+
+        // Start a shell process
+        const shellProcess = await instance.spawn("jsh", {
+          terminal: {
+            cols: termRef.current?.cols || 80,
+            rows: termRef.current?.rows || 24,
+          },
+        });
+
+        // Pipe shell output to terminal
+        shellProcess.output.pipeTo(
+          new WritableStream({
+            write(data) {
+              termRef.current?.write(data);
+            },
+          })
+        );
+
+        // Store shell writer
+        shellWriterRef.current = shellProcess.input.getWriter();
+
+        // Handle terminal input
+        termRef.current.onData((data) => {
+          shellWriterRef.current?.write(data);
+        });
+
+        // Install dependencies and start the app
+        const installProcess = await instance.spawn("npm", ["install"]);
+        const installExitCode = await installProcess.exit;
+
+        if (installExitCode !== 0) {
+          throw new Error("Installation failed");
+        }
+
+        // Start the development server
+        const startProcess = await instance.spawn("npm", ["start"]);
+
+        setIsLoading(false);
+        setIsAppReady(true);
+        setWebServerPort(3000); // React's default port
+      } catch (webContainerError) {
+        console.error("WebContainer initialization error:", webContainerError);
+        toast.error(
+          "Failed to initialize WebContainer. Please try again or contact support."
+        );
+        setIsLoading(false);
+        // Don't redirect, just show the error state
+      }
+    } catch (error) {
+      console.error("Detailed error in startEditor:", error);
+      toast.error(`Editor initialization failed: ${error.message}`);
+      router.push("/not-found");
     }
-    setFilesState((prevFiles) => ({
-      ...prevFiles,
-      [fileName]: { ...prevFiles[fileName], value },
-    }));
+  };
+
+  // Handle editor changes
+  const handleEditorChange = async (value, event) => {
+    if (!webcontainerInstance || !fileName) return;
+
+    try {
+      const filePath = `src/${fileName}`;
+      await webcontainerInstance.fs.writeFile(filePath, value);
+      setFilesState((prevFiles) => ({
+        ...prevFiles,
+        [fileName]: { ...prevFiles[fileName], value },
+      }));
+    } catch (error) {
+      console.error("Error writing file:", error);
+      toast.error("Failed to save changes!");
+    }
   };
 
   const uploadToS3 = async () => {
@@ -197,149 +369,42 @@ export default function Tests({ params }: { params: { id: string } }) {
     3000
   ); // Debounce saveToS3 function with 3-second delay
 
-  // Start the editor and initialize socket connection
-  const startEditor = async () => {
-    try {
-      const response = await fetch("/api/codeEditor/start", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ testID: params.id }),
-      });
-
-      const data = await response.json();
-
-      const ports = data.ports;
-
-      const startTime = new Date(data.startTime);
-      const endTime = new Date(data.endTime);
-      const currentTime = new Date();
-
-      const remainingTime = Math.floor(
-        (endTime.getTime() - currentTime.getTime()) / 1000
-      );
-
-      setTimeLeft(remainingTime);
-
-      console.log("Editor start response:", ports);
-
-      if (data.message === "invalid") {
-        router.push("/404");
-        return;
-      } else {
-        setIsLoading(false);
-      }
-
-      // `https://ec2.skillbit.org/${ports.socketServer}/`
-
-      const newSocket = io(
-        DOCKER_EC2_TOGGLE
-          ? `https://api.skillbit.org`
-          : `http://localhost:${ports.socketServer}`,
-        {
-          path: `/${ports.socketServer}/socket.io/`,
-        }
-      );
-      setSocket(newSocket);
-      setWebServerPort(ports.webServer);
-
-      newSocket.on("connect", () => {
-        newSocket.emit("data", "\n");
-        newSocket.emit("data", "cd project\n");
-        newSocket.emit("data", "npm install ajv@^6.12.6 ajv-keywords@^3.5.2\n");
-        newSocket.emit(
-          "data",
-          `PUBLIC_URL=/${ports.webServer} npm run start\n`
-        );
-        for (const [fileKey, file] of Object.entries(filesState)) {
-          newSocket.emit("codeChange", {
-            fileName: fileKey,
-            value: file.value,
-          });
-        }
-
-        setTimeout(() => {
-          setIframeKey((prevKey) => prevKey + 1);
-        }, 2000);
-      });
-    } catch (error) {
-      console.error("Error starting editor:", error);
-      router.push("/404");
-    }
-  };
-
-  const getIsSubmitted = async () => {
-    try {
-      const response = await fetch("/api/database", {
-        method: "POST",
-        headers: {
-          "Content-type": "application/json",
-        },
-        body: JSON.stringify({
-          action: "getIsSubmitted",
-          id: params.id,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error("Failed to get testID submitted.");
-      }
-      return data.message.submitted;
-    } catch (error) {
-      console.error(error);
-      throw new Error("Failed to get testID submitted.");
-    }
-  };
-
-  const getIsExpired = async () => {
-    try {
-      const response = await fetch("/api/database", {
-        method: "POST",
-        headers: {
-          "Content-type": "application/json",
-        },
-        body: JSON.stringify({
-          action: "getIsExpired",
-          id: params.id,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error("Failed to get testID expired.");
-      }
-      return data.message;
-    } catch (error) {
-      console.error(error);
-      throw new Error("Failed to get testID expired.");
-    }
-  };
-
   useEffect(() => {
     const initializeEditor = async () => {
+      console.log(
+        "Starting initialization with filesState:",
+        Object.keys(filesState).length
+      );
       const submitted = await getIsSubmitted();
+      console.log("Test submitted status:", submitted);
       if (submitted) {
         router.push("/submission_screen");
+        return;
       }
 
       const expired = await getIsExpired();
+      console.log("Test expired status:", expired);
       if (expired) {
         router.push("/testExpired");
+        return;
       }
 
       if (Object.keys(filesState).length > 0) {
-        if (!socket) {
+        console.log("Files loaded, checking webcontainer");
+        if (!webcontainerInstance) {
+          console.log("Starting editor initialization");
           startEditor();
         }
       }
     };
-    // fetchFilesFromS3();
-    initializeEditor();
-  }, [filesState]); // Wait for filesState to be populated
 
-  // Initialize the terminal
+    initializeEditor();
+  }, [filesState]);
+
+  // Initialize the terminal and fetch files
   useEffect(() => {
     if (termRef.current == null) {
+      console.log("Initializing terminal and fetching files");
       termRef.current = new Terminal(xtermOptions);
       fitAddonRef.current = new FitAddon();
       termRef.current.loadAddon(fitAddonRef.current);
@@ -349,7 +414,7 @@ export default function Tests({ params }: { params: { id: string } }) {
 
       fetchFilesFromS3();
     }
-  }, [socket]); // Added socket as dependency to ensure startEditor is called when socket is set
+  }, []);
 
   // Set up socket event listeners after both terminal and socket are ready
   useEffect(() => {
@@ -373,11 +438,7 @@ export default function Tests({ params }: { params: { id: string } }) {
     if (webServerPort) {
       const checkAppReady = async () => {
         try {
-          const response = await fetch(
-            DOCKER_EC2_TOGGLE
-              ? `https://api.skillbit.org/${webServerPort}`
-              : `http://localhost:${webServerPort}`
-          );
+          const response = await fetch(`http://localhost:${webServerPort}`);
           if (response.ok) {
             setIsAppReady(true);
           } else {
@@ -461,6 +522,52 @@ export default function Tests({ params }: { params: { id: string } }) {
     await markSubmitted();
     await deleteContainer();
     router.push("/submission_screen");
+  };
+
+  const getIsSubmitted = async () => {
+    try {
+      const response = await fetch("/api/database", {
+        method: "POST",
+        headers: {
+          "Content-type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "getIsSubmitted",
+          id: params.id,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error("Failed to get testID submitted.");
+      }
+      return data.message.submitted;
+    } catch (error) {
+      console.error(error);
+      throw new Error("Failed to get testID submitted.");
+    }
+  };
+
+  const getIsExpired = async () => {
+    try {
+      const response = await fetch("/api/database", {
+        method: "POST",
+        headers: {
+          "Content-type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "getIsExpired",
+          id: params.id,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error("Failed to get testID expired.");
+      }
+      return data.message;
+    } catch (error) {
+      console.error(error);
+      throw new Error("Failed to get testID expired.");
+    }
   };
 
   return (
@@ -691,7 +798,7 @@ export default function Tests({ params }: { params: { id: string } }) {
             {file && (
               <Editor
                 theme="myTheme"
-                path={file.name}
+                path={`src/${file.name}`}
                 defaultLanguage={file.language}
                 defaultValue={file.value}
                 onChange={handleEditorChange}
@@ -714,12 +821,8 @@ export default function Tests({ params }: { params: { id: string } }) {
               <iframe
                 className="w-full h-full"
                 key={iframeKey}
-                src={
-                  DOCKER_EC2_TOGGLE
-                    ? `https://api.skillbit.org/${webServerPort}`
-                    : `http://localhost:${webServerPort}`
-                }
-              ></iframe>
+                src="http://localhost:3000"
+              />
             </motion.div>
           )}
           <div
