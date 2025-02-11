@@ -26,6 +26,7 @@ import Arrow from "../../../public/assets/icons/arrow.svg";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { files as initialFiles } from "./files";
+import { FaPlay } from "react-icons/fa";
 
 const formatTime = (seconds) => {
   const mins = Math.floor(seconds / 60)
@@ -630,6 +631,31 @@ export default function Tests({ params }: { params: { id: string } }) {
     }
   };
 
+  const runPythonFile = async () => {
+    if (!termRef.current || !webcontainerInstance) return;
+
+    // Clear terminal
+    termRef.current.clear();
+
+    try {
+      termRef.current.write(
+        `\x1b[32m> Running Python file: ${fileName}...\x1b[0m\r\n`
+      );
+
+      const process = await webcontainerInstance.spawn("python3", [fileName]);
+
+      process.output.pipeTo(
+        new WritableStream({
+          write(data) {
+            termRef.current?.write(data);
+          },
+        })
+      );
+    } catch (error) {
+      termRef.current.write(`\x1b[31mError: ${error}\x1b[0m\r\n`);
+    }
+  };
+
   return (
     <div className="max-w-screen text-white bg-slate-950 min-h-screen overflow-x-hidden flex">
       {/* Toast Container for notifications */}
@@ -825,32 +851,45 @@ export default function Tests({ params }: { params: { id: string } }) {
                 height={20}
               ></Image>
             </div>
-            <div
-              className="flex p-2 rounded-md hover:bg-slate-800 border border-transparent hover:border-slate-700 cursor-pointer"
-              style={{
-                backgroundColor: showBrowser ? "#1e293b" : "",
-                border: showBrowser ? "1px solid #334155" : "",
-              }}
-              onClick={() => setShowBrowser(!showBrowser)}
-            >
-              <Image
-                src={WindowIcon}
-                alt="Window"
-                width={20}
-                height={20}
-              ></Image>
-            </div>
-            <div
-              className="flex p-2 rounded-md hover:bg-slate-800 border border-transparent hover:border-slate-700 cursor-pointer"
-              onClick={handleRefreshClick}
-            >
-              <Image
-                src={RefreshIcon}
-                alt="Refresh"
-                width={20}
-                height={20}
-              ></Image>
-            </div>
+            {!isPythonProject && (
+              <>
+                <div
+                  className="flex p-2 rounded-md hover:bg-slate-800 border border-transparent hover:border-slate-700 cursor-pointer"
+                  style={{
+                    backgroundColor: showBrowser ? "#1e293b" : "",
+                    border: showBrowser ? "1px solid #334155" : "",
+                  }}
+                  onClick={() => setShowBrowser(!showBrowser)}
+                >
+                  <Image
+                    src={WindowIcon}
+                    alt="Window"
+                    width={20}
+                    height={20}
+                  ></Image>
+                </div>
+                <div
+                  className="flex p-2 rounded-md hover:bg-slate-800 border border-transparent hover:border-slate-700 cursor-pointer"
+                  onClick={handleRefreshClick}
+                >
+                  <Image
+                    src={RefreshIcon}
+                    alt="Refresh"
+                    width={20}
+                    height={20}
+                  ></Image>
+                </div>
+              </>
+            )}
+            {isPythonProject && (
+              <button
+                onClick={runPythonFile}
+                className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded flex items-center gap-2"
+              >
+                <FaPlay size={12} />
+                Run
+              </button>
+            )}
           </div>
         </div>
         <div className="h-full flex relative">
