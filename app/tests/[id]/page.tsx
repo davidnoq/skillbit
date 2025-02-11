@@ -66,7 +66,6 @@ function useDebouncedEffect(callback, dependencies, delay) {
 
 export default function Tests({ params }: { params: { id: string } }) {
   const [fileName, setFileName] = useState("");
-  // const [filesState, setFilesState] = useState(initialFiles);
   const terminalRef = useRef(null);
   const termRef = useRef(null);
   const fitAddonRef = useRef(null);
@@ -82,10 +81,10 @@ export default function Tests({ params }: { params: { id: string } }) {
   const [isAppReady, setIsAppReady] = useState(false);
   const router = useRouter();
   const [filesState, setFilesState] = useState({});
-  const [timeLeft, setTimeLeft] = useState(null); // Initialized to null
-  // const [file, setFile] = useState("");
+  const [timeLeft, setTimeLeft] = useState(null);
   const file = filesState[fileName];
   const shellWriterRef = useRef(null);
+  const [isPythonProject, setIsPythonProject] = useState(false);
 
   const fetchFilesFromS3 = async () => {
     try {
@@ -108,19 +107,41 @@ export default function Tests({ params }: { params: { id: string } }) {
       const formattedFiles = {};
       let firstFilename = "";
       let count = 0;
+      let hasPythonFiles = false;
+
       for (const file of files) {
         const name = file.fileName.split("/").pop();
         if (count == 0) {
           firstFilename = name;
         }
         count++;
+
+        // Determine file language
+        const extension = name.split(".").pop()?.toLowerCase();
+        const language =
+          extension === "py"
+            ? "python"
+            : extension === "js"
+            ? "javascript"
+            : extension === "css"
+            ? "css"
+            : "plaintext";
+
+        if (extension === "py") {
+          hasPythonFiles = true;
+        }
+
         formattedFiles[name] = {
           name: name,
           value: file.content,
+          language: language,
         };
       }
+
+      setIsPythonProject(hasPythonFiles);
       setFilesState(formattedFiles);
       setFileName(firstFilename);
+      setShowBrowser(!hasPythonFiles); // Hide browser for Python projects
     } catch (error) {
       console.error("Error fetching files from S3:", error);
       toast.error("Failed to load files from S3!");
@@ -152,7 +173,7 @@ export default function Tests({ params }: { params: { id: string } }) {
         return;
       }
 
-      // Set time if not already set
+      // Handle time setup
       if (!testData.message.startTime) {
         console.log("No start time, initializing test timer");
         const startResponse = await fetch("/api/database", {
@@ -185,7 +206,6 @@ export default function Tests({ params }: { params: { id: string } }) {
 
       try {
         console.log("Booting WebContainer");
-        // Check for cross-origin isolation
         if (!crossOriginIsolated) {
           throw new Error(
             "Cross-Origin Isolation is not enabled. Please refresh the page."
@@ -196,12 +216,13 @@ export default function Tests({ params }: { params: { id: string } }) {
         const instance = await WebContainer.boot();
         setWebcontainerInstance(instance);
 
-        // Create project structure
-        await instance.fs.mkdir("src");
-
         // Mount initial files
-        const files = {
-          "package.json": {
+        const files = {};
+
+        console.log("isPythonProject", isPythonProject);
+        if (!isPythonProject) {
+          // For JavaScript projects, set up React app structure
+          files["package.json"] = {
             file: {
               contents: JSON.stringify(
                 {
@@ -222,16 +243,18 @@ export default function Tests({ params }: { params: { id: string } }) {
                 2
               ),
             },
-          },
-        };
-
-        // Add source files to src directory
-        for (const [key, fileData] of Object.entries(filesState)) {
-          files[`${fileData.name}`] = {
-            file: {
-              contents: fileData.value,
-            },
           };
+        }
+
+        // Add source files
+        for (const [key, fileData] of Object.entries(filesState)) {
+          if (isPythonProject) {
+            files[fileData.name] = {
+              file: {
+                contents: fileData.value,
+              },
+            };
+          }
         }
 
         await instance.mount(files);
@@ -261,48 +284,50 @@ export default function Tests({ params }: { params: { id: string } }) {
           shellWriterRef.current?.write(data);
         });
 
-        // Install dependencies and start the app
-        const installProcess = await instance.spawn("bash", [
-          "-c",
-          "y | npx create-react-app my-react-app",
-        ]);
+        if (!isPythonProject) {
+          // For JavaScript projects, set up React environment
+          const installProcess = await instance.spawn("bash", [
+            "-c",
+            "y | npx create-react-app my-react-app",
+          ]);
 
-        const installExitCode = await installProcess.exit;
-        console.log("Installed create-react-app");
+          const installExitCode = await installProcess.exit;
+          console.log("Installed create-react-app");
 
-        const installWebVitals = await instance.spawn("bash", [
-          "-c",
-          "cd my-react-app && npm install web-vitals",
-        ]);
-        console.log("Installed web-vitals");
+          const installWebVitals = await instance.spawn("bash", [
+            "-c",
+            "cd my-react-app && npm install web-vitals",
+          ]);
+          console.log("Installed web-vitals");
 
-        shellWriterRef.current?.write("cd my-react-app && npm start\n");
+          // Copy the files into the React app structure after create-react-app is done
+          for (const [key, fileData] of Object.entries(filesState)) {
+            const filePath = `my-react-app/src/${fileData.name}`;
+            console.log(`Writing file to: ${filePath}`);
+            await instance.fs.writeFile(filePath, fileData.value);
+          }
 
-        // Copy the files into the React app structure
-        for (const [key, fileData] of Object.entries(filesState)) {
-          const filePath = `my-react-app/src/${fileData.name}`;
-          console.log(`Writing file to: ${filePath}`);
-          await instance.fs.writeFile(filePath, fileData.value);
-        }
+          shellWriterRef.current?.write("cd my-react-app && npm start\n");
 
-        // Listen for server-ready event before starting the server
-        instance.on("server-ready", (port, url) => {
-          console.log("Server is ready on port:", port);
-          console.log("Server URL:", url);
-          setWebServerPort(port);
-          setWebServerUrl(url);
-          setIsAppReady(true);
-        });
+          // Listen for server-ready event
+          instance.on("server-ready", (port, url) => {
+            console.log("Server is ready on port:", port);
+            console.log("Server URL:", url);
+            setWebServerPort(port);
+            setWebServerUrl(url);
+            setIsAppReady(true);
+          });
 
-        // Start the development server
-        // const startServer = await instance.spawn("bash", [
-        //   "-c",
-        //   "cd my-react-app && npm start",
-        // ]);
-        // console.log("Started server");
-
-        if (installExitCode !== 0) {
-          throw new Error("Installation failed");
+          if (installExitCode !== 0) {
+            throw new Error("Installation failed");
+          }
+        } else {
+          // For Python projects, install Python if needed
+          const installPython = await instance.spawn("bash", [
+            "-c",
+            "apt-get update && apt-get install -y python3",
+          ]);
+          console.log("Installed Python");
         }
 
         setIsLoading(false);
@@ -325,8 +350,10 @@ export default function Tests({ params }: { params: { id: string } }) {
     if (!webcontainerInstance || !fileName) return;
 
     try {
-      // Save to React app src directory instead of root
-      const filePath = `my-react-app/src/${fileName}`;
+      // Save file in the appropriate location
+      const filePath = isPythonProject
+        ? fileName
+        : `my-react-app/src/${fileName}`;
       console.log(`Saving changes to: ${filePath}`);
       await webcontainerInstance.fs.writeFile(filePath, value);
       setFilesState((prevFiles) => ({
@@ -832,14 +859,17 @@ export default function Tests({ params }: { params: { id: string } }) {
               <Editor
                 theme="myTheme"
                 path={`src/${file.name}`}
-                defaultLanguage={file.language}
+                defaultLanguage={
+                  file.language ||
+                  (file.name.endsWith(".py") ? "python" : "javascript")
+                }
                 defaultValue={file.value}
                 onChange={handleEditorChange}
                 className="absolute left-0 right-0 bottom-0 top-0 border-r border-r-slate-700"
               />
             )}
           </div>
-          {isAppReady && showBrowser && (
+          {!isPythonProject && isAppReady && showBrowser && (
             <motion.div
               initial={{ opacity: 0, x: 100 }}
               animate={{ opacity: 1, x: 0 }}
