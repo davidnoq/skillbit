@@ -1,12 +1,17 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import Editor from "@monaco-editor/react";
+import React, { useEffect, useRef, useState, Suspense } from "react";
+import dynamic from "next/dynamic";
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
 import { WebContainer } from "@webcontainer/api";
 import { FaPlay } from "react-icons/fa";
+
+// Dynamically import client-side only components
+const Editor = dynamic(() => import("@monaco-editor/react"), {
+  ssr: false,
+});
 
 // We'll need @webcontainer/api for the in-browser WebContainer:
 export default function CodeEditor() {
@@ -170,41 +175,49 @@ export default function CodeEditor() {
   };
 
   return (
-    <div className="max-w-screen text-white bg-slate-900 min-h-screen flex flex-col">
-      <div className="flex-1 flex">
-        {/* Left side: Editor */}
-        <div style={{ width: "50%", backgroundColor: "#1e1e1e" }}>
-          <div className="flex justify-between items-center p-2 bg-[#252526]">
-            <span>{fileName}</span>
-            {isPythonFile && (
-              <button
-                onClick={runPythonFile}
-                className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded flex items-center gap-2"
-              >
-                <FaPlay size={12} />
-                Run
-              </button>
-            )}
-          </div>
-          <Editor
-            height="calc(100% - 40px)"
-            width="100%"
-            theme="vs-dark"
-            path={fileName}
-            defaultLanguage={isPythonFile ? "python" : "javascript"}
-            defaultValue={fileContent}
-            onChange={handleEditorChange}
-          />
+    <Suspense
+      fallback={
+        <div className="w-full h-screen flex items-center justify-center bg-slate-900 text-white">
+          Loading editor...
         </div>
+      }
+    >
+      <div className="max-w-screen text-white bg-slate-900 min-h-screen flex flex-col">
+        <div className="flex-1 flex">
+          {/* Left side: Editor */}
+          <div style={{ width: "50%", backgroundColor: "#1e1e1e" }}>
+            <div className="flex justify-between items-center p-2 bg-[#252526]">
+              <span>{fileName}</span>
+              {isPythonFile && (
+                <button
+                  onClick={runPythonFile}
+                  className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded flex items-center gap-2"
+                >
+                  <FaPlay size={12} />
+                  Run
+                </button>
+              )}
+            </div>
+            <Editor
+              height="calc(100% - 40px)"
+              width="100%"
+              theme="vs-dark"
+              path={fileName}
+              defaultLanguage={isPythonFile ? "python" : "javascript"}
+              defaultValue={fileContent}
+              onChange={handleEditorChange}
+            />
+          </div>
 
-        {/* Right side: Terminal */}
-        <div style={{ width: "50%", backgroundColor: "#000" }}>
-          <div
-            ref={terminalRef}
-            style={{ width: "100%", height: "100%" }}
-          ></div>
+          {/* Right side: Terminal */}
+          <div style={{ width: "50%", backgroundColor: "#000" }}>
+            <div
+              ref={terminalRef}
+              style={{ width: "100%", height: "100%" }}
+            ></div>
+          </div>
         </div>
       </div>
-    </div>
+    </Suspense>
   );
 }
