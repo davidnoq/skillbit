@@ -323,7 +323,9 @@ export default function Tests({ params }: { params: { id: string } }) {
     if (!webcontainerInstance || !fileName) return;
 
     try {
-      const filePath = `src/${fileName}`;
+      // Save to React app src directory instead of root
+      const filePath = `my-react-app/src/${fileName}`;
+      console.log(`Saving changes to: ${filePath}`);
       await webcontainerInstance.fs.writeFile(filePath, value);
       setFilesState((prevFiles) => ({
         ...prevFiles,
