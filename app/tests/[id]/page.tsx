@@ -276,6 +276,13 @@ export default function Tests({ params }: { params: { id: string } }) {
         ]);
         console.log("Installed web-vitals");
 
+        // Copy the files into the React app structure
+        for (const [key, fileData] of Object.entries(filesState)) {
+          const filePath = `my-react-app/src/${fileData.name}`;
+          console.log(`Writing file to: ${filePath}`);
+          await instance.fs.writeFile(filePath, fileData.value);
+        }
+
         // Listen for server-ready event before starting the server
         instance.on("server-ready", (port, url) => {
           console.log("Server is ready on port:", port);
@@ -285,6 +292,7 @@ export default function Tests({ params }: { params: { id: string } }) {
           setIsAppReady(true);
         });
 
+        // Start the development server
         const startServer = await instance.spawn("bash", [
           "-c",
           "cd my-react-app && npm start",
