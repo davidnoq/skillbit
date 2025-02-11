@@ -2,18 +2,16 @@
 
 import React, { useEffect, useRef, useState, Suspense } from "react";
 import dynamic from "next/dynamic";
+import { FaPlay } from "react-icons/fa";
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
-import { WebContainer } from "@webcontainer/api";
-import { FaPlay } from "react-icons/fa";
 
 // Dynamically import client-side only components
 const Editor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
 });
 
-// We'll need @webcontainer/api for the in-browser WebContainer:
 export default function CodeEditor() {
   const [webcontainerInstance, setWebcontainerInstance] = useState<any>(null);
 
@@ -36,14 +34,19 @@ export default function CodeEditor() {
 
   useEffect(() => {
     const extension = fileName.split(".").pop()?.toLowerCase();
-    console.log("file Extension", extension);
     setIsPythonFile(extension === "py");
   }, [fileName]);
 
   // Start the webcontainer only once:
   useEffect(() => {
+    // If there's no window, don't run (prevents SSR errors):
+    if (typeof window === "undefined") return;
+
     async function bootContainer() {
-      // Boot the container for both Python and JavaScript files
+      // Dynamically import @webcontainer/api in the browser
+      const { WebContainer } = await import("@webcontainer/api");
+
+      // Boot the container
       const instance = await WebContainer.boot();
       setWebcontainerInstance(instance);
 
@@ -57,7 +60,7 @@ export default function CodeEditor() {
           },
         });
       } else {
-        // For JavaScript files, set up the React app structure
+        // For JavaScript files, set up the basic structure
         await instance.mount({
           "index.js": {
             file: {
@@ -120,7 +123,7 @@ export default function CodeEditor() {
     }
 
     bootContainer();
-  }, [isPythonFile]);
+  }, [isPythonFile, fileName, fileContent]);
 
   // Resize terminal if window changes
   useEffect(() => {
@@ -137,8 +140,8 @@ export default function CodeEditor() {
   function handleEditorChange(value?: string) {
     if (!value) return;
     setFileContent(value);
+    // Update the file in webcontainer
     if (webcontainerInstance) {
-      // Update the file in webcontainer
       webcontainerInstance.fs.writeFile(fileName, value);
     }
   }
@@ -151,7 +154,7 @@ export default function CodeEditor() {
     termRef.current.clear();
 
     try {
-      // Write the Python code to a file and execute it
+      // Write the Python code to the file and execute it
       await webcontainerInstance.fs.writeFile(fileName, fileContent);
 
       termRef.current.write(
