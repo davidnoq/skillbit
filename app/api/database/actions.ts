@@ -813,7 +813,7 @@ export async function assignTemplate(
           `;
 
           const data = await resend.emails.send({
-            from: "Skillbit <skillbit@resend.dev>",
+            from: "Skillbit <hello@skillbit.org>",
             to: applicant.email,
             subject: "Skillbit Assessment",
             html: emailHtml,
