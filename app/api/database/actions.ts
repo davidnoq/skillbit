@@ -889,7 +889,7 @@ export async function contactForm(
     `;
 
     const data = await resend.emails.send({
-      from: "Skillbit <skillbit@resend.dev>",
+      from: "Skillbit <hello@skillbit.org>",
       to: "skillbitassessment@gmail.com",
       subject: "Skillbit Contact Form Submission",
       html: emailHtml,
