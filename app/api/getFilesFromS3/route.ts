@@ -80,9 +80,13 @@ export async function POST(req: Request) {
 
       //Loop through generated files and insert them into S3 Bucket
       for (const f of files) {
+        // Determine if it's a Python file
+        const isPythonFile = f.name.toLowerCase().endsWith(".py");
+
         const params = {
           Bucket: "skillbit-inprogress",
-          Key: `${testId}/${f.name}`, // Save under the folder with the testId
+          // For Python files, save directly in the test directory, for JS files use project/src
+          Key: `${testId}/${isPythonFile ? "" : "project/src/"}${f.name}`,
           Body: f.content,
           ContentType: "text/plain", // Adjust content type based on your file type
         };

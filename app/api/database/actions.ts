@@ -5,10 +5,11 @@ import { experimental_useOptimistic } from "react";
 import prisma from "../database/prismaConnection";
 import { Resend } from "resend";
 const bcrypt = require("bcrypt");
+import path from "path";
 import "dotenv";
 import App from "next/app";
 import { render } from "@react-email/render";
-import logo_full_transparent_blue from "/public/assets/branding/logos/logo_full_transparent_blue.png";
+import logo_full_transparent_blue from "/assets/branding/logos/logo_full_transparent_blue.png";
 import { Question } from "@prisma/client";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -209,7 +210,8 @@ export async function findQuestions(companyId: string) {
 export async function updateQuestion(
   id: string,
   title: string,
-  prompt: string
+  prompt: string,
+  candidatePrompt: string,
 ) {
   try {
     const questions = await prisma.question.update({
@@ -219,6 +221,7 @@ export async function updateQuestion(
       data: {
         title: title,
         prompt: prompt,
+        candidatePrompt: candidatePrompt,
       },
     });
     return "Success";

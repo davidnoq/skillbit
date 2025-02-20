@@ -122,7 +122,7 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ message: response }, { status: 200 });
   } else if (data.action === "updateQuestion") {
-    const response = await updateQuestion(data.id, data.title, data.prompt);
+    const response = await updateQuestion(data.id, data.title, data.prompt, data.candidatePrompt);
     if (response == null) {
       return NextResponse.json(
         { message: "Error updating question." },
@@ -325,14 +325,14 @@ export async function POST(req: Request) {
   } else if (data.action === "getTestById") {
     const response = await getTestById(data.id);
     if (response == null) {
-      return NextResponse.json(
-        { message: "Error fetching test by ID." },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: null }, { status: 400 });
     }
     return NextResponse.json({ message: response }, { status: 200 });
   } else if (data.action === "startTest") {
     const startResponse = await startTest(data.testId);
+    if (startResponse == null) {
+      return NextResponse.json({ message: null }, { status: 400 });
+    }
     return NextResponse.json({ message: startResponse }, { status: 200 });
   } else {
     return NextResponse.json(

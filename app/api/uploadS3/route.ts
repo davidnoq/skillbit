@@ -42,9 +42,13 @@ export async function POST(req) {
         throw new Error("Each file must have a 'filename' and 'content'.");
       }
 
+      // Determine if it's a Python file
+      const isPythonFile = file.filename.toLowerCase().endsWith(".py");
+
       const params = {
         Bucket: "skillbit-inprogress",
-        Key: `${testId}/project/src/${file.filename}`, // Save under the folder with the testId
+        // For Python files, save directly in the test directory, for JS files use project/src
+        Key: `${testId}/${isPythonFile ? "" : "project/src/"}${file.filename}`,
         Body: file.content,
         ContentType: "text/plain", // Adjust content type based on your file type
       };
