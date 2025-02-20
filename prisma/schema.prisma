@@ -1,30 +1,28 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-arm64-openssl-1.1.x"]
 }
+
 datasource db {
-  provider = "postgresql"
-  url = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
-model Account {
-  id                 String  @id @default(cuid())
-  userId             String
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String?  @db.Text
-  access_token       String?  @db.Text
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String?  @db.Text
-  session_state      String?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -38,28 +36,27 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid()) @unique
+  email         String     @unique
+  emailVerified DateTime?
+  id            String     @id @unique @default(cuid())
+  image         String?
+  password      String
   firstName     String
   lastName      String
-  password      String
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
+  created       DateTime   @default(now())
   accounts      Account[]
+  employee      Employee?
+  questions     Question[]
   sessions      Session[]
-  employee Employee?
-  questions Question[]
-  created DateTime @default(now())
 }
 
-//Pivot table to connect user and company
 model Employee {
-  id Int @id @default(autoincrement())
-  userId String @unique
-  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         Int     @id @default(autoincrement())
+  userId     String  @unique
   isApproved Boolean @default(false)
-  companyID String
-  company Company @relation(fields: [companyID], references: [id], onDelete: Cascade)
+  companyID  String
+  company    Company @relation(fields: [companyID], references: [id], onDelete: Cascade)
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
@@ -69,45 +66,46 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
 model testID {
-  id String @id @default(cuid()) @unique
-  firstName     String
-  lastName      String
-  email         String
-  companyID String
-  company         Company     @relation(fields: [companyID], references: [id], onDelete: Cascade)
-  templateID String?
-  template Question? @relation(fields: [templateID], references: [id], onDelete: Cascade)
-  status        String @default("Unsent")
-  score         String?
+  companyID      String
+  created        DateTime  @default(now())
+  templateID     String?
   expirationDate DateTime?
-  startTime     DateTime? 
-  endTime       DateTime? 
-  created DateTime @default(now())
-  submitted Boolean @default(false)
+  id             String    @id @unique @default(cuid())
+  email          String
+  firstName      String
+  lastName       String
+  score          String?
+  status         String    @default("Unsent")
+  submitted      Boolean   @default(false)
+  endTime        DateTime?
+  startTime      DateTime?
+  company        Company   @relation(fields: [companyID], references: [id], onDelete: Cascade)
+  template       Question? @relation(fields: [templateID], references: [id], onDelete: Cascade)
 }
 
-//THIS IS THE TEMPLATE FOR THE QUESTION
 model Question {
-  id String @id @default(cuid()) @unique
-  companyID String
-  company Company @relation(fields: [companyID], references: [id], onDelete: Cascade)
-  title String
-  language String
-  framework String?
-  prompt String @default("")
-  expiration String @default("1 month")
-  type String
-  userId String
-  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  testIDs testID[]
-  candidatePrompt String @default("")
+  id              String   @id @unique @default(cuid())
+  companyID       String
+  title           String
+  language        String
+  framework       String?
+  type            String
+  userId          String
+  expiration      String   @default("1 month")
+  prompt          String   @default("")
+  candidatePrompt String   @default("")
+  company         Company  @relation(fields: [companyID], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  testIDs         testID[]
 }
+
 model Company {
-  id String @id @default(cuid()) @unique
-  name String
-  testIDs testID[]
+  id        String     @id @unique @default(cuid())
+  name      String
+  join_code String     @unique
   employees Employee[]
   questions Question[]
-  join_code String @unique
+  testIDs   testID[]
 }
