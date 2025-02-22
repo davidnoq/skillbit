@@ -174,37 +174,6 @@ export default function Submissions({ params }: { params: { id: string } }) {
         return;
       }
 
-      // // Handle time setup
-      // if (!testData.message.startTime) {
-      //   console.log("No start time, initializing test timer");
-      //   const startResponse = await fetch("/api/database", {
-      //     method: "POST",
-      //     headers: {
-      //       "Content-Type": "application/json",
-      //     },
-      //     body: JSON.stringify({
-      //       action: "startTest",
-      //       testId: params.id,
-      //     }),
-      //   });
-      //   const startData = await startResponse.json();
-      //   console.log("Start test response:", startData);
-      //   const endTime = new Date(startData.message.endTime);
-      //   const currentTime = new Date();
-      //   const remainingTime = Math.floor(
-      //     (endTime.getTime() - currentTime.getTime()) / 1000
-      //   );
-      //   setTimeLeft(remainingTime);
-      // } else {
-      //   console.log("Test already started, calculating remaining time");
-      //   const endTime = new Date(testData.message.endTime);
-      //   const currentTime = new Date();
-      //   const remainingTime = Math.floor(
-      //     (endTime.getTime() - currentTime.getTime()) / 1000
-      //   );
-      //   setTimeLeft(remainingTime);
-      // }
-
       try {
         console.log("Booting WebContainer");
         if (!crossOriginIsolated) {
@@ -625,22 +594,9 @@ export default function Submissions({ params }: { params: { id: string } }) {
           >
             <div className="fixed bg-slate-900 border-slate-700 border-r w-72 p-3 flex flex-col justify-between h-screen">
               <div className="flex flex-col justify-between">
-                {/* <div className="flex-1 max-w-xl bg-white bg-opacity-5 p-2 rounded-lg flex justify-between border border-slate-700 mb-3">
-                <input
-                  className="text-white bg-transparent focus:outline-none w-full placeholder:text-white"
-                  placeholder="Search..."
-                ></input>
-                <Image src={SearchIcon} alt="" width={25} height={25}></Image>
-              </div> */}
                 <ul className="list-none text-white flex flex-col gap-1 bg-slate-800 border-slate-700 border p-3 rounded-lg">
                   <div className="flex justify-between items-center">
                     <p className="text-base">Project Information</p>
-                    {/* <Image
-                    src={DropdownIcon}
-                    alt=""
-                    width={14}
-                    height={14}
-                  ></Image> */}
                   </div>
                   <hr className="border-t-0 border-b border-b-slate-700 mb-1" />
                   <h1 className="text-sm">Prompt:</h1>
@@ -694,29 +650,7 @@ export default function Submissions({ params }: { params: { id: string } }) {
                   </ul>
                 </ul>
               </div>
-              <div className="flex flex-col justify-between">
-                {/* <motion.button
-                  className="w-full bg-indigo-600 px-6 py-3 rounded-lg flex justify-center items-center m-auto hover:bg-opacity-100"
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2, ease: "backOut" }}
-                  onClick={handleSubmit}
-                >
-                  Submit{" "}
-                  <div className="arrow flex items-center justify-center">
-                    <div className="arrowMiddle"></div>
-                    <div>
-                      <Image
-                        src={Arrow}
-                        alt=""
-                        width={14}
-                        height={14}
-                        className="arrowSide"
-                      ></Image>
-                    </div>
-                  </div>
-                </motion.button> */}
-              </div>
+              <div className="flex flex-col justify-between"></div>
             </div>
           </motion.div>
         )}
