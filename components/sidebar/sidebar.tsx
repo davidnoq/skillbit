@@ -124,6 +124,7 @@ const Sidebar = () => {
         body: JSON.stringify({
           action: "getApplicants",
           company: companyId,
+          isSample: false,
         }),
       });
       const data = await response.json();

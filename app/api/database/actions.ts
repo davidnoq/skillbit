@@ -18,7 +18,8 @@ export async function addApplicant(
   firstName: string,
   lastName: string,
   email: string,
-  recruiterEmail: string
+  recruiterEmail: string,
+  isSample: boolean = false
 ) {
   try {
     //finding company id from recruiter email
@@ -48,9 +49,10 @@ export async function addApplicant(
               id: companyId,
             },
           },
+          isSample: isSample,
         },
       });
-      return "Success";
+      return newApplicant.id;
     } else {
       return null;
     }
@@ -68,7 +70,8 @@ interface Applicant {
 
 export async function addApplicants(
   applicants: Array<Applicant>,
-  recruiterEmail: string
+  recruiterEmail: string,
+  isSample: boolean = false
 ) {
   try {
     //finding company id from recruiter email
@@ -99,6 +102,7 @@ export async function addApplicants(
                 id: companyId,
               },
             },
+            isSample: isSample,
           },
         });
       });
@@ -197,6 +201,13 @@ export async function findQuestions(companyId: string) {
       where: {
         company: {
           id: companyId,
+        },
+      },
+      include: {
+        testIDs: {
+          where: {
+            isSample: true,
+          },
         },
       },
     });
@@ -624,18 +635,23 @@ export async function userSignIn(email: string, password: string) {
   }
 }
 
-export async function getApplicants(company: string) {
+export async function getApplicants(
+  company: string,
+  isSample: boolean = false
+) {
   try {
     const applicants = await prisma.testID.findMany({
       where: {
         company: {
           id: company,
         },
+        isSample: isSample,
       },
       include: {
         template: true,
       },
     });
+    console.log(applicants);
     return applicants;
   } catch (error) {
     console.error(error);
@@ -743,6 +759,34 @@ interface TestIDInterface {
   submitted: boolean;
   template: Question;
   expirationDate: Date;
+}
+
+export async function assignSampleTemplate(
+  applicantData: Array<TestIDInterface>,
+  templateID: string
+) {
+  try {
+    const promises = applicantData.map(async (applicant) => {
+      await prisma.testID.update({
+        where: {
+          id: applicant.id,
+        },
+        data: {
+          template: {
+            connect: {
+              id: templateID,
+            },
+          },
+        },
+      });
+    });
+    await Promise.all(promises);
+
+    return "Success";
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
 }
 
 export async function assignTemplate(

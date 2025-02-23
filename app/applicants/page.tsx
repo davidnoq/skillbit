@@ -163,6 +163,7 @@ const Applicants = () => {
         body: JSON.stringify({
           action: "getApplicants",
           company: companyId,
+          isSample: false,
         }),
       });
       const data = await response.json();
@@ -258,6 +259,7 @@ const Applicants = () => {
           lastName: applicantLastName,
           email: applicantEmail,
           recruiterEmail: email,
+          isSample: false,
         }),
       });
 
@@ -313,6 +315,7 @@ const Applicants = () => {
           action: "addApplicants",
           applicants: applicants,
           recruiterEmail: email,
+          isSample: false,
         }),
       });
       if (!response.ok) {

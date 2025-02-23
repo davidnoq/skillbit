@@ -30,6 +30,7 @@ import {
   getTestById,
   startTest,
   getInstructions,
+  assignSampleTemplate,
 } from "./actions";
 import { send } from "process";
 
@@ -76,7 +77,8 @@ export async function POST(req: Request) {
       data.firstName,
       data.lastName,
       data.email,
-      data.recruiterEmail
+      data.recruiterEmail,
+      data.isSample
     );
     if (response == null) {
       return NextResponse.json(
@@ -86,7 +88,11 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ message: response }, { status: 200 });
   } else if (data.action === "addApplicants") {
-    const response = await addApplicants(data.applicants, data.recruiterEmail);
+    const response = await addApplicants(
+      data.applicants,
+      data.recruiterEmail,
+      data.isSample
+    );
     if (response == null) {
       return NextResponse.json(
         { message: "Error adding applicants." },
@@ -282,7 +288,7 @@ export async function POST(req: Request) {
     const response = await getInstructions(data.id);
     return NextResponse.json({ message: response }, { status: 200 });
   } else if (data.action === "getApplicants") {
-    const response = await getApplicants(data.company);
+    const response = await getApplicants(data.company, data.isSample);
     return NextResponse.json({ message: response }, { status: 200 });
   } else if (data.action === "getIsSubmitted") {
     const response = await getIsSubmitted(data.id);
@@ -295,6 +301,18 @@ export async function POST(req: Request) {
       data.applicantData,
       data.template,
       data.company
+    );
+    if (response == null) {
+      return NextResponse.json(
+        { message: "Error assigning templates." },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json({ message: response }, { status: 200 });
+  } else if (data.action === "assignSampleTemplate") {
+    const response = await assignSampleTemplate(
+      data.applicantData,
+      data.template
     );
     if (response == null) {
       return NextResponse.json(

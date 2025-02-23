@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Loader from "@/components/loader/loader";
 
 import Nav from "@/components/nav/nav";
+import ReactMarkdown from "react-markdown";
 import Image from "next/image";
 import Arrow from "../../public/assets/icons/arrow.svg";
 import Demo from "../../public/assets/images/demo.png";
@@ -31,6 +32,23 @@ import QuestionIcon from "../../public/assets/icons/question.svg";
 import SearchIcon from "../../public/assets/icons/search.svg";
 
 import Edit from "../../public/assets/icons/edit.svg";
+import { assignTemplate } from "../api/database/actions";
+
+interface TestIDInterface {
+  companyID: string;
+  id: string;
+  selected: boolean;
+  created: Date;
+  firstName: string;
+  lastName: string;
+  email: string;
+  status: string;
+  score: string;
+  submitted: boolean;
+  template: Question;
+  expirationDate: Date;
+  instructions: string;
+}
 
 interface Question {
   title: string;
@@ -42,6 +60,7 @@ interface Question {
   companyID: string;
   userId: string;
   id: string;
+  testIDs: Array<TestIDInterface>;
 }
 
 const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
@@ -52,6 +71,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
   const [newQuestionButton, setNewQuestionButton] = useState(false);
   const [card, setCard] = useState(1);
   const [email, setEmail] = useState("");
+  const [viewFullInstructions, setViewFullInstructions] = useState(false);
 
   const [userCompanyName, setUserCompanyName] = useState<string | null>(null);
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
@@ -96,7 +116,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
   };
   // ***** End of updated logic for Dashboard Button *****
 
-  const findQuestions = async (company: string) => {
+  async function findQuestions(company: string) {
     try {
       const response = await fetch("/api/database", {
         method: "POST",
@@ -113,10 +133,12 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
       setCurrentQuestion(data.message[0]);
       setNewTitle(data.message[0]?.title || "");
       setNewPrompt(data.message[0]?.prompt || "");
+      return data.message[0];
     } catch (error) {
       console.error("Error finding questions: ", error);
+      return null;
     }
-  };
+  }
 
   const deleteQuestion = async (id: string) => {
     toast.loading("Deleting question...");
@@ -180,7 +202,6 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
   };
 
   const addQuestion = async () => {
-    // framework can be ""
     if (title !== "" && language !== "" && type !== "") {
       try {
         const response = await fetch("/api/database", {
@@ -199,6 +220,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
             expiration: expiration,
           }),
         });
+
         const data = await response.json();
         if (data.message === "Success") {
           toast.remove();
@@ -211,7 +233,32 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
           setExpiration("1 month");
           setViewAdditionalSettings(false);
           setNewQuestionButton(false);
-          await findQuestions(userCompanyId || "");
+
+          // Run all handleAddApplicant calls concurrently
+          const testIDs = await Promise.all([
+            handleAddApplicant(
+              "sample1",
+              "sample1",
+              "skillbitassessment@gmail.com"
+            ),
+            handleAddApplicant(
+              "sample2",
+              "sample2",
+              "skillbitassessment@gmail.com"
+            ),
+            handleAddApplicant(
+              "sample3",
+              "sample3",
+              "skillbitassessment@gmail.com"
+            ),
+          ]);
+
+          // Ensure findQuestions completes before handleAssignTemplate
+          const current = await findQuestions(userCompanyId || "");
+          await handleAssignTemplate(current);
+
+          // Fetch files only after all above operations are completed
+          fetchFilesFromS3(testIDs);
         } else if (
           data.message ===
           "Title already exists. Please choose a unique template title."
@@ -234,6 +281,143 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
       if (type === "") {
         toast.error("Please choose a type.");
       }
+    }
+  };
+
+  const fetchFilesFromS3 = async (testIDs: Array<any>) => {
+    try {
+      await Promise.all(
+        testIDs.map(async (testID) => {
+          const response = await fetch("/api/getFilesFromS3", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ testId: testID.message, recruiter: false }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch files for testID: ${testID}`);
+          }
+
+          const data = await response.json();
+          return data;
+        })
+      );
+      await findQuestions(userCompanyId || "");
+    } catch (error) {
+      console.error("Error fetching files from S3:", error);
+      toast.error("Failed to load files from S3!");
+    }
+  };
+
+  async function handleAddApplicant(
+    applicantFirstName: string,
+    applicantLastName: string,
+    applicantEmail: string
+  ) {
+    try {
+      const response = await fetch("/api/database", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "addApplicant",
+          firstName: applicantFirstName,
+          lastName: applicantLastName,
+          email: applicantEmail,
+          recruiterEmail: email,
+          isSample: true,
+        }),
+      });
+
+      const testID = await response.json();
+      return testID;
+    } catch (error) {
+      toast.remove();
+      toast.error("Error adding applicant");
+      return null;
+    }
+  }
+
+  interface TestIDInterface {
+    companyID: string;
+    id: string;
+    selected: boolean;
+    created: Date;
+    firstName: string;
+    lastName: string;
+    email: string;
+    status: string;
+    score: string;
+    submitted: boolean;
+    template: Question;
+    expirationDate: Date;
+  }
+
+  // Fetch Applicants from DB
+  const getApplicants = async (companyId: string) => {
+    try {
+      const response = await fetch("/api/database", {
+        method: "POST",
+        headers: {
+          "Content-type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "getApplicants",
+          company: companyId,
+          isSample: true,
+        }),
+      });
+      const data = await response.json();
+      data.message.forEach((applicant: TestIDInterface) => {
+        applicant.selected = true;
+      });
+
+      // Sort by created date
+      data.message.sort((a: TestIDInterface, b: TestIDInterface) => {
+        const dateA = new Date(a.created);
+        const dateB = new Date(b.created);
+        return dateA.getTime() - dateB.getTime();
+      });
+      return data.message;
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleAssignTemplate = async (current: any) => {
+    try {
+      console.log("trying applicant data:");
+
+      const applicantData: TestIDInterface[] = await getApplicants(
+        userCompanyId || ""
+      );
+      console.log("Applicant data:", applicantData);
+      toast.loading("Loading...");
+      const response = await fetch("/api/database", {
+        method: "POST",
+        headers: {
+          "Content-type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "assignSampleTemplate",
+          applicantData: applicantData,
+          template: current?.id,
+        }),
+      });
+      const data = await response.json();
+      toast.remove();
+
+      if (data.message === "Success") {
+        toast.success("Successfully set templates and sent tests.");
+      } else {
+        console.log(data);
+        toast.error("An error occurred while setting templates.");
+      }
+    } catch (error) {
+      console.error("Error setting templates: ", error);
     }
   };
 
@@ -493,6 +677,95 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                             <span className="bg-slate-800 border border-slate-700 py-1 px-2 rounded-xl">
                               {currentQuestion.expiration}
                             </span>
+                          </div>
+                          <div className="mt-3 flex flex-col gap-2">
+                            <h2 className="text-lg font-semibold">Samples:</h2>
+                            <div className="flex flex-col gap-3">
+                              {currentQuestion.testIDs.map((sample) => (
+                                <>
+                                  {" "}
+                                  <div
+                                    className="bg-slate-800 border border-slate-700 py-1 px-2 rounded-xl"
+                                    onClick={() => {
+                                      setViewFullInstructions(true);
+                                    }}
+                                  >
+                                    <p>
+                                      <ReactMarkdown>
+                                        {sample.instructions.length > 200
+                                          ? sample.instructions.slice(0, 200) +
+                                            "..."
+                                          : sample.instructions}
+                                      </ReactMarkdown>
+                                    </p>
+                                  </div>
+                                  {/* New Question Modal */}
+                                  <AnimatePresence>
+                                    {viewFullInstructions && (
+                                      <motion.div
+                                        className="fixed inset-0 z-50 flex justify-center items-center bg-slate-950 bg-opacity-60 p-6 backdrop-blur-sm"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                      >
+                                        <motion.div
+                                          className="absolute m-auto z-50 left-6 right-6 top-6 bottom-6 flex flex-col max-w-4xl bg-slate-900 border border-slate-800 rounded-xl p-6 overflow-y-auto"
+                                          style={{
+                                            scrollbarWidth: "thin",
+                                            scrollbarColor:
+                                              "rgb(51 65 85) transparent",
+                                          }}
+                                          initial={{ opacity: 0, y: 30 }}
+                                          animate={{ opacity: 1, y: 0 }}
+                                          exit={{ opacity: 0, y: 30 }}
+                                          transition={{
+                                            duration: 0.5,
+                                            ease: "backOut",
+                                          }}
+                                        >
+                                          <div className="flex justify-end">
+                                            <motion.button
+                                              className="bg-slate-900 border border-slate-800 p-2 rounded-full flex justify-center items-center"
+                                              onClick={() => {
+                                                setViewFullInstructions(false);
+                                              }}
+                                              initial={{ opacity: 0, y: 30 }}
+                                              animate={{ opacity: 1, y: 0 }}
+                                              exit={{ opacity: 0, y: 30 }}
+                                              transition={{
+                                                duration: 0.7,
+                                                ease: "backOut",
+                                              }}
+                                              aria-label="Close Modal"
+                                            >
+                                              <Image
+                                                src={Plus}
+                                                width={14}
+                                                height={14}
+                                                className="rotate-45"
+                                                alt="Close"
+                                              />
+                                            </motion.button>
+                                          </div>
+                                          <div className="flex flex-col gap-6">
+                                            <div className="flex flex-col">
+                                              <h1 className="text-2xl font-semibold">
+                                                Instructions
+                                              </h1>
+                                              <p className="text-slate-400 mt-6">
+                                                <ReactMarkdown>
+                                                  {sample.instructions}
+                                                </ReactMarkdown>
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </motion.div>
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                </>
+                              ))}
+                            </div>
                           </div>
                         </div>
                         {/* End of Question Header */}
