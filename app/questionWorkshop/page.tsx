@@ -255,7 +255,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
 
           // Ensure findQuestions completes before handleAssignTemplate
           const current = await findQuestions(userCompanyId || "");
-          await handleAssignTemplate(current);
+          await handleAssignTemplate(current, testIDs);
 
           // Fetch files only after all above operations are completed
           fetchFilesFromS3(testIDs);
@@ -387,14 +387,13 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
     }
   };
 
-  const handleAssignTemplate = async (current: any) => {
+  const handleAssignTemplate = async (
+    current: Question,
+    testIDs: Array<TestIDInterface>
+  ) => {
     try {
       console.log("trying applicant data:");
-
-      const applicantData: TestIDInterface[] = await getApplicants(
-        userCompanyId || ""
-      );
-      console.log("Applicant data:", applicantData);
+      console.log(testIDs);
       toast.loading("Loading...");
       const response = await fetch("/api/database", {
         method: "POST",
@@ -403,8 +402,8 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
         },
         body: JSON.stringify({
           action: "assignSampleTemplate",
-          applicantData: applicantData,
-          template: current?.id,
+          applicantData: testIDs,
+          template: current.id,
         }),
       });
       const data = await response.json();

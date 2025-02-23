@@ -762,14 +762,14 @@ interface TestIDInterface {
 }
 
 export async function assignSampleTemplate(
-  applicantData: Array<TestIDInterface>,
+  applicantData: any,
   templateID: string
 ) {
   try {
-    const promises = applicantData.map(async (applicant) => {
+    const promises = applicantData.map(async (applicant: any) => {
       await prisma.testID.update({
         where: {
-          id: applicant.id,
+          id: applicant.message,
         },
         data: {
           template: {
