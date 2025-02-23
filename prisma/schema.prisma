@@ -81,6 +81,8 @@ model testID {
   submitted      Boolean   @default(false)
   endTime        DateTime?
   startTime      DateTime?
+  instructions   String    @default("")
+  isSample       Boolean   @default(false) // <-- Indicates if it's a sample testID
   company        Company   @relation(fields: [companyID], references: [id], onDelete: Cascade)
   template       Question? @relation(fields: [templateID], references: [id], onDelete: Cascade)
 }
@@ -95,7 +97,6 @@ model Question {
   userId          String
   expiration      String   @default("1 month")
   prompt          String   @default("")
-  candidatePrompt String   @default("")
   company         Company  @relation(fields: [companyID], references: [id], onDelete: Cascade)
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   testIDs         testID[]

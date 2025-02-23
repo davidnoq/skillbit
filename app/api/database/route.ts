@@ -29,6 +29,7 @@ import {
   getIsExpired,
   getTestById,
   startTest,
+  getInstructions,
 } from "./actions";
 import { send } from "process";
 
@@ -122,7 +123,7 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ message: response }, { status: 200 });
   } else if (data.action === "updateQuestion") {
-    const response = await updateQuestion(data.id, data.title, data.prompt, data.candidatePrompt);
+    const response = await updateQuestion(data.id, data.title, data.prompt);
     if (response == null) {
       return NextResponse.json(
         { message: "Error updating question." },
@@ -276,6 +277,9 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+    return NextResponse.json({ message: response }, { status: 200 });
+  } else if (data.action === "getInstructions") {
+    const response = await getInstructions(data.id);
     return NextResponse.json({ message: response }, { status: 200 });
   } else if (data.action === "getApplicants") {
     const response = await getApplicants(data.company);

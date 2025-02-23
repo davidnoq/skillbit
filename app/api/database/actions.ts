@@ -210,8 +210,7 @@ export async function findQuestions(companyId: string) {
 export async function updateQuestion(
   id: string,
   title: string,
-  prompt: string,
-  candidatePrompt: string,
+  prompt: string
 ) {
   try {
     const questions = await prisma.question.update({
@@ -221,7 +220,6 @@ export async function updateQuestion(
       data: {
         title: title,
         prompt: prompt,
-        candidatePrompt: candidatePrompt,
       },
     });
     return "Success";
@@ -692,6 +690,40 @@ export async function markSubmitted(id: string) {
       },
     });
     return "Success";
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
+export async function updateInstructions(id: string, instructions: string) {
+  try {
+    await prisma.testID.update({
+      where: {
+        id: id,
+      },
+      data: {
+        instructions: instructions,
+      },
+    });
+    return "Success";
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
+export async function getInstructions(id: string) {
+  try {
+    const applicants = await prisma.testID.findUnique({
+      where: {
+        id: id,
+      },
+      select: {
+        instructions: true,
+      },
+    });
+    return applicants;
   } catch (error) {
     console.error(error);
     return null;

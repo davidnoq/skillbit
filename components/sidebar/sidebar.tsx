@@ -30,7 +30,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import Dropdown from "../../public/assets/icons/dropdown.svg";
 
 interface Question {
-  candidatePrompt: string;
   title: string;
   language: string;
   framework: string;

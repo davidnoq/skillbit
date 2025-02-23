@@ -4,6 +4,7 @@
 
 "use client";
 
+import ReactMarkdown from "react-markdown";
 import Editor, { loader } from "@monaco-editor/react";
 import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { io } from "socket.io-client";
@@ -23,6 +24,7 @@ import DropdownIcon from "../../../public/assets/icons/dropdown.svg";
 import SearchIcon from "../../../public/assets/icons/search.svg";
 import ExitIcon from "../../../public/assets/icons/exit.svg";
 import Arrow from "../../../public/assets/icons/arrow.svg";
+import Plus from "../../../public/assets/icons/plus.svg";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { files as initialFiles } from "./files";
@@ -86,6 +88,8 @@ export default function Tests({ params }: { params: { id: string } }) {
   const file = filesState[fileName];
   const shellWriterRef = useRef(null);
   const [isPythonProject, setIsPythonProject] = useState(false);
+  const [instructions, setInstructions] = useState("");
+  const [viewFullInstructions, setViewFullInstructions] = useState(false);
 
   const fetchFilesFromS3 = async () => {
     try {
@@ -137,6 +141,28 @@ export default function Tests({ params }: { params: { id: string } }) {
           value: file.content,
           language: language,
         };
+      }
+
+      try {
+        const response = await fetch("/api/database", {
+          method: "POST",
+          headers: {
+            "Content-type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "getInstructions",
+            id: params.id,
+          }),
+        });
+        const data = await response.json();
+        console.log(data);
+        setInstructions(data.message.instructions);
+        if (!response.ok) {
+          throw new Error("Failed to load instructions from db");
+        }
+      } catch (error) {
+        console.error("Error fetching instructions:", error);
+        toast.error("Failed to load instructions from db");
       }
 
       setIsPythonProject(hasPythonFiles);
@@ -733,15 +759,76 @@ export default function Tests({ params }: { params: { id: string } }) {
                   ></Image> */}
                   </div>
                   <hr className="border-t-0 border-b border-b-slate-700 mb-1" />
-                  <h1 className="text-sm">Prompt:</h1>
+                  {/* <h1 className="text-sm">Instructions:</h1> */}
                   <p className="text-sm">
-                    You are tasked with building a simple To-Do list application
-                    in React. The application should allow users to add and
-                    remove tasks from their to-do list...
+                    <ReactMarkdown>
+                      {instructions.length > 300
+                        ? instructions.slice(0, 300) + "..."
+                        : instructions}
+                    </ReactMarkdown>
                   </p>
-                  <Link href="" className="text-sm">
+                  <Link
+                    href=""
+                    className="text-sm"
+                    onClick={() => setViewFullInstructions(true)}
+                  >
                     See more
                   </Link>
+                  {/* New Question Modal */}
+                  <AnimatePresence>
+                    {viewFullInstructions && (
+                      <motion.div
+                        className="fixed inset-0 z-50 flex justify-center items-center bg-slate-950 bg-opacity-60 p-6 backdrop-blur-sm"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                      >
+                        <motion.div
+                          className="absolute m-auto z-50 left-6 right-6 top-6 bottom-6 flex flex-col max-w-4xl bg-slate-900 border border-slate-800 rounded-xl p-6 overflow-y-auto"
+                          style={{
+                            scrollbarWidth: "thin",
+                            scrollbarColor: "rgb(51 65 85) transparent",
+                          }}
+                          initial={{ opacity: 0, y: 30 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 30 }}
+                          transition={{ duration: 0.5, ease: "backOut" }}
+                        >
+                          <div className="flex justify-end">
+                            <motion.button
+                              className="bg-slate-900 border border-slate-800 p-2 rounded-full flex justify-center items-center"
+                              onClick={() => {
+                                setViewFullInstructions(false);
+                              }}
+                              initial={{ opacity: 0, y: 30 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: 30 }}
+                              transition={{ duration: 0.7, ease: "backOut" }}
+                              aria-label="Close Modal"
+                            >
+                              <Image
+                                src={Plus}
+                                width={14}
+                                height={14}
+                                className="rotate-45"
+                                alt="Close"
+                              />
+                            </motion.button>
+                          </div>
+                          <div className="flex flex-col gap-6">
+                            <div className="flex flex-col">
+                              <h1 className="text-2xl font-semibold">
+                                Instructions
+                              </h1>
+                              <p className="text-slate-400 mt-6">
+                                <ReactMarkdown>{instructions}</ReactMarkdown>
+                              </p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </ul>
                 <ul className="list-none text-white flex flex-col gap-1 bg-slate-800 border-slate-700 border p-3 rounded-lg mt-3">
                   <div className="flex justify-between items-center">
@@ -928,7 +1015,7 @@ export default function Tests({ params }: { params: { id: string } }) {
             </motion.div>
           )}
           <div
-            className="absolute left-0 right-0 bottom-0 z-30 p-6 bg-slate-950 bg-opacity-60 backdrop-blur-md drop-shadow-lg border-t border-slate-700"
+            className="absolute left-0 right-0 bottom-0 p-6 bg-slate-950 bg-opacity-60 backdrop-blur-md drop-shadow-lg border-t border-slate-700"
             style={{ display: showTerminal ? "block" : "none" }}
           >
             <div ref={terminalRef} className="overflow-hidden"></div>

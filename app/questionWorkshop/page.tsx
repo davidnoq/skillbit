@@ -593,7 +593,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                 exit={{ opacity: 0 }}
               >
                 <motion.div
-                  className="flex flex-col gap-12 max-w-4xl w-full bg-slate-900 border border-slate-800 rounded-xl p-6 overflow-y-auto"
+                  className="absolute m-auto left-6 right-6 top-6 bottom-6 flex flex-col max-w-4xl bg-slate-900 border border-slate-800 rounded-xl p-6 overflow-y-auto"
                   style={{
                     scrollbarWidth: "thin",
                     scrollbarColor: "rgb(51 65 85) transparent",
