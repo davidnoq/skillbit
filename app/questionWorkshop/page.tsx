@@ -71,6 +71,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
   const [newQuestionButton, setNewQuestionButton] = useState(false);
   const [card, setCard] = useState(1);
   const [email, setEmail] = useState("");
+  const [selectedSample, setSelectedSample] = useState<string | null>(null);
   const [viewFullInstructions, setViewFullInstructions] = useState(false);
 
   const [userCompanyName, setUserCompanyName] = useState<string | null>(null);
@@ -339,21 +340,6 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
       toast.error("Error adding applicant");
       return null;
     }
-  }
-
-  interface TestIDInterface {
-    companyID: string;
-    id: string;
-    selected: boolean;
-    created: Date;
-    firstName: string;
-    lastName: string;
-    email: string;
-    status: string;
-    score: string;
-    submitted: boolean;
-    template: Question;
-    expirationDate: Date;
   }
 
   // Fetch Applicants from DB
@@ -681,89 +667,88 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                             <h2 className="text-lg font-semibold">Samples:</h2>
                             <div className="flex flex-col gap-3">
                               {currentQuestion.testIDs.map((sample) => (
-                                <>
-                                  {" "}
-                                  <div
-                                    className="bg-slate-800 border border-slate-700 py-1 px-2 rounded-xl"
-                                    onClick={() => {
-                                      setViewFullInstructions(true);
-                                    }}
+                                <div
+                                  key={sample.id} // Ensure each sample has a unique key
+                                  className="bg-slate-800 border border-slate-700 py-1 px-2 rounded-xl"
+                                  onClick={() => {
+                                    setSelectedSample(sample.instructions); // Store selected sample's instructions
+                                  }}
+                                >
+                                  <p>
+                                    <ReactMarkdown>
+                                      {sample.instructions.length > 200
+                                        ? sample.instructions.slice(0, 200) +
+                                          "..."
+                                        : sample.instructions}
+                                    </ReactMarkdown>
+                                  </p>
+                                </div>
+                              ))}
+
+                              {/* Modal */}
+                              <AnimatePresence>
+                                {selectedSample && (
+                                  <motion.div
+                                    className="fixed inset-0 z-50 flex justify-center items-center bg-slate-950 bg-opacity-60 p-6 backdrop-blur-sm"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
                                   >
-                                    <p>
-                                      <ReactMarkdown>
-                                        {sample.instructions.length > 200
-                                          ? sample.instructions.slice(0, 200) +
-                                            "..."
-                                          : sample.instructions}
-                                      </ReactMarkdown>
-                                    </p>
-                                  </div>
-                                  {/* New Question Modal */}
-                                  <AnimatePresence>
-                                    {viewFullInstructions && (
-                                      <motion.div
-                                        className="fixed inset-0 z-50 flex justify-center items-center bg-slate-950 bg-opacity-60 p-6 backdrop-blur-sm"
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                      >
-                                        <motion.div
-                                          className="absolute m-auto z-50 left-6 right-6 top-6 bottom-6 flex flex-col max-w-4xl bg-slate-900 border border-slate-800 rounded-xl p-6 overflow-y-auto"
-                                          style={{
-                                            scrollbarWidth: "thin",
-                                            scrollbarColor:
-                                              "rgb(51 65 85) transparent",
-                                          }}
+                                    <motion.div
+                                      className="absolute m-auto z-50 left-6 right-6 top-6 bottom-6 flex flex-col max-w-4xl bg-slate-900 border border-slate-800 rounded-xl p-6 overflow-y-auto"
+                                      style={{
+                                        scrollbarWidth: "thin",
+                                        scrollbarColor:
+                                          "rgb(51 65 85) transparent",
+                                      }}
+                                      initial={{ opacity: 0, y: 30 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      exit={{ opacity: 0, y: 30 }}
+                                      transition={{
+                                        duration: 0.5,
+                                        ease: "backOut",
+                                      }}
+                                    >
+                                      <div className="flex justify-end">
+                                        <motion.button
+                                          className="bg-slate-900 border border-slate-800 p-2 rounded-full flex justify-center items-center"
+                                          onClick={() =>
+                                            setSelectedSample(null)
+                                          } // Close modal by clearing state
                                           initial={{ opacity: 0, y: 30 }}
                                           animate={{ opacity: 1, y: 0 }}
                                           exit={{ opacity: 0, y: 30 }}
                                           transition={{
-                                            duration: 0.5,
+                                            duration: 0.7,
                                             ease: "backOut",
                                           }}
+                                          aria-label="Close Modal"
                                         >
-                                          <div className="flex justify-end">
-                                            <motion.button
-                                              className="bg-slate-900 border border-slate-800 p-2 rounded-full flex justify-center items-center"
-                                              onClick={() => {
-                                                setViewFullInstructions(false);
-                                              }}
-                                              initial={{ opacity: 0, y: 30 }}
-                                              animate={{ opacity: 1, y: 0 }}
-                                              exit={{ opacity: 0, y: 30 }}
-                                              transition={{
-                                                duration: 0.7,
-                                                ease: "backOut",
-                                              }}
-                                              aria-label="Close Modal"
-                                            >
-                                              <Image
-                                                src={Plus}
-                                                width={14}
-                                                height={14}
-                                                className="rotate-45"
-                                                alt="Close"
-                                              />
-                                            </motion.button>
-                                          </div>
-                                          <div className="flex flex-col gap-6">
-                                            <div className="flex flex-col">
-                                              <h1 className="text-2xl font-semibold">
-                                                Instructions
-                                              </h1>
-                                              <p className="text-slate-400 mt-6">
-                                                <ReactMarkdown>
-                                                  {sample.instructions}
-                                                </ReactMarkdown>
-                                              </p>
-                                            </div>
-                                          </div>
-                                        </motion.div>
-                                      </motion.div>
-                                    )}
-                                  </AnimatePresence>
-                                </>
-                              ))}
+                                          <Image
+                                            src={Plus}
+                                            width={14}
+                                            height={14}
+                                            className="rotate-45"
+                                            alt="Close"
+                                          />
+                                        </motion.button>
+                                      </div>
+                                      <div className="flex flex-col gap-6">
+                                        <div className="flex flex-col">
+                                          <h1 className="text-2xl font-semibold">
+                                            Instructions
+                                          </h1>
+                                          <p className="text-slate-400 mt-6">
+                                            <ReactMarkdown>
+                                              {selectedSample}
+                                            </ReactMarkdown>
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
                             </div>
                           </div>
                         </div>

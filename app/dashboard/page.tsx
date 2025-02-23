@@ -44,6 +44,7 @@ interface Question {
   companyID: string;
   userId: string;
   id: string;
+  testIDs: Array<TestIDInterface>;
 }
 
 interface Employee {
@@ -65,6 +66,7 @@ interface TestIDInterface {
   submitted: boolean;
   template: Question;
   expirationDate: Date;
+  instructions: string;
 }
 
 const Dashboard = () => {

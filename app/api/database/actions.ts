@@ -759,6 +759,7 @@ interface TestIDInterface {
   submitted: boolean;
   template: Question;
   expirationDate: Date;
+  instructions: string;
 }
 
 export async function assignSampleTemplate(

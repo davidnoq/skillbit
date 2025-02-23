@@ -25,13 +25,13 @@ interface TestIDInterface {
   firstName: string;
   lastName: string;
   email: string;
-  status: string; // "Sent" | "Unsent" | "Submitted" | "Expired"
+  status: string;
   score: string;
   submitted: boolean;
   template: Question;
   expirationDate: Date;
+  instructions: string;
 }
-
 interface Question {
   title: string;
   language: string;
@@ -42,6 +42,7 @@ interface Question {
   companyID: string;
   userId: string;
   id: string;
+  testIDs: Array<TestIDInterface>;
 }
 
 const Applicants = () => {
