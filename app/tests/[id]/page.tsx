@@ -90,6 +90,7 @@ export default function Tests({ params }: { params: { id: string } }) {
   const [isPythonProject, setIsPythonProject] = useState(false);
   const [instructions, setInstructions] = useState("");
   const [viewFullInstructions, setViewFullInstructions] = useState(false);
+  const [isSample, setIsSample] = useState(false);
 
   const fetchFilesFromS3 = async () => {
     try {
@@ -165,6 +166,28 @@ export default function Tests({ params }: { params: { id: string } }) {
         toast.error("Failed to load instructions from db");
       }
 
+      try {
+        const response = await fetch("/api/database", {
+          method: "POST",
+          headers: {
+            "Content-type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "getIsSample",
+            id: params.id,
+          }),
+        });
+        const data = await response.json();
+        console.log(data);
+        setIsSample(data.message.isSample);
+        if (!response.ok) {
+          throw new Error("Failed to load isSample from db");
+        }
+      } catch (error) {
+        console.error("Error fetching isSample:", error);
+        toast.error("Failed to load isSample from db");
+      }
+
       setIsPythonProject(hasPythonFiles);
       setFilesState(formattedFiles);
       setFileName(firstFilename);
@@ -215,20 +238,25 @@ export default function Tests({ params }: { params: { id: string } }) {
         });
         const startData = await startResponse.json();
         console.log("Start test response:", startData);
-        const endTime = new Date(startData.message.endTime);
-        const currentTime = new Date();
-        const remainingTime = Math.floor(
-          (endTime.getTime() - currentTime.getTime()) / 1000
-        );
-        setTimeLeft(remainingTime);
+
+        if (!isSample) {
+          const endTime = new Date(startData.message.endTime);
+          const currentTime = new Date();
+          const remainingTime = Math.floor(
+            (endTime.getTime() - currentTime.getTime()) / 1000
+          );
+          setTimeLeft(remainingTime);
+        }
       } else {
         console.log("Test already started, calculating remaining time");
-        const endTime = new Date(testData.message.endTime);
-        const currentTime = new Date();
-        const remainingTime = Math.floor(
-          (endTime.getTime() - currentTime.getTime()) / 1000
-        );
-        setTimeLeft(remainingTime);
+        if (!isSample) {
+          const endTime = new Date(testData.message.endTime);
+          const currentTime = new Date();
+          const remainingTime = Math.floor(
+            (endTime.getTime() - currentTime.getTime()) / 1000
+          );
+          setTimeLeft(remainingTime);
+        }
       }
 
       try {
@@ -872,27 +900,29 @@ export default function Tests({ params }: { params: { id: string } }) {
                 </ul>
               </div>
               <div className="flex flex-col justify-between">
-                <motion.button
-                  className="w-full bg-indigo-600 px-6 py-3 rounded-lg flex justify-center items-center m-auto hover:bg-opacity-100"
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2, ease: "backOut" }}
-                  onClick={handleSubmit}
-                >
-                  Submit{" "}
-                  <div className="arrow flex items-center justify-center">
-                    <div className="arrowMiddle"></div>
-                    <div>
-                      <Image
-                        src={Arrow}
-                        alt=""
-                        width={14}
-                        height={14}
-                        className="arrowSide"
-                      ></Image>
+                {!isSample && (
+                  <motion.button
+                    className="w-full bg-indigo-600 px-6 py-3 rounded-lg flex justify-center items-center m-auto hover:bg-opacity-100"
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2, ease: "backOut" }}
+                    onClick={handleSubmit}
+                  >
+                    Submit{" "}
+                    <div className="arrow flex items-center justify-center">
+                      <div className="arrowMiddle"></div>
+                      <div>
+                        <Image
+                          src={Arrow}
+                          alt=""
+                          width={14}
+                          height={14}
+                          className="arrowSide"
+                        ></Image>
+                      </div>
                     </div>
-                  </div>
-                </motion.button>
+                  </motion.button>
+                )}
               </div>
             </div>
           </motion.div>

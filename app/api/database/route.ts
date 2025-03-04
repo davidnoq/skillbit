@@ -31,6 +31,7 @@ import {
   startTest,
   getInstructions,
   assignSampleTemplate,
+  getIsSample,
 } from "./actions";
 import { send } from "process";
 
@@ -286,6 +287,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: response }, { status: 200 });
   } else if (data.action === "getInstructions") {
     const response = await getInstructions(data.id);
+    return NextResponse.json({ message: response }, { status: 200 });
+  } else if (data.action === "getIsSample") {
+    const response = await getIsSample(data.id);
     return NextResponse.json({ message: response }, { status: 200 });
   } else if (data.action === "getApplicants") {
     const response = await getApplicants(data.company, data.isSample);

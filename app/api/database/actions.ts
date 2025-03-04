@@ -746,6 +746,23 @@ export async function getInstructions(id: string) {
   }
 }
 
+export async function getIsSample(id: string) {
+  try {
+    const applicants = await prisma.testID.findUnique({
+      where: {
+        id: id,
+      },
+      select: {
+        isSample: true,
+      },
+    });
+    return applicants;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
 interface TestIDInterface {
   companyID: string;
   id: string;
