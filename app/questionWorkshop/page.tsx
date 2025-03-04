@@ -697,7 +697,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                                       className="bg-slate-800 border border-slate-700 p-3 rounded-xl"
                                     >
                                       <h2>Sample {index + 1}</h2>
-                                      <p className="">
+                                      <p className="text-slate-400">
                                         <ReactMarkdown>
                                           {sample.instructions.length > 200
                                             ? sample.instructions.slice(
