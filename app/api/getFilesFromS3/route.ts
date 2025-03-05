@@ -80,13 +80,56 @@ export async function POST(req: Request) {
 
       //Loop through generated files and insert them into S3 Bucket
       for (const f of files) {
-        // Determine if it's a Python file
-        const isPythonFile = f.name.toLowerCase().endsWith(".py");
+        // Determine file type based on extension
+        const fileExtension = f.name.split(".").pop()?.toLowerCase();
+
+        // Map common extensions to their language
+        const extensionToLanguageMap: Record<string, string> = {
+          py: "python",
+          js: "javascript",
+          ts: "typescript",
+          jsx: "javascript",
+          tsx: "typescript",
+          html: "html",
+          css: "css",
+          java: "java",
+          cpp: "cpp",
+          c: "c",
+          sql: "sql",
+          php: "php",
+          rb: "ruby",
+          go: "go",
+          rs: "rust",
+          swift: "swift",
+          kt: "kotlin",
+          cs: "csharp",
+        };
+
+        const fileLanguage = fileExtension
+          ? extensionToLanguageMap[fileExtension] || "text"
+          : "text";
+
+        // Determine appropriate directory structure based on language
+        let fileKey = `${testId}/`;
+
+        if (fileLanguage === "python") {
+          // Python files go directly in the test directory
+          fileKey += f.name;
+        } else if (
+          fileLanguage === "javascript" ||
+          fileLanguage === "typescript"
+        ) {
+          // JS/TS files go in project/src
+          fileKey += `project/src/${f.name}`;
+        } else {
+          // Other languages follow their own conventions
+          // For now, place them in the root directory
+          fileKey += f.name;
+        }
 
         const params = {
           Bucket: "skillbit-inprogress",
-          // For Python files, save directly in the test directory, for JS files use project/src
-          Key: `${testId}/${isPythonFile ? "" : "project/src/"}${f.name}`,
+          Key: fileKey,
           Body: f.content,
           ContentType: "text/plain", // Adjust content type based on your file type
         };
@@ -156,8 +199,20 @@ async function generateFilesFromPrompt(
   prompt: string
 ): Promise<Array<{ name: any; content: string }>> {
   try {
+    // Extract language information from the prompt for better context
+    const languageMatch = prompt.match(
+      /Please use (\w+) as the primary programming language/i
+    );
+    const primaryLanguage = languageMatch ? languageMatch[1] : null;
+
+    // Add specific instructions based on language
+    let enhancedPrompt = prompt;
+    if (primaryLanguage) {
+      enhancedPrompt += `\n\nMake sure all generated files use ${primaryLanguage} as the primary language and follow best practices for ${primaryLanguage} development.`;
+    }
+
     const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      contents: [{ role: "user", parts: [{ text: enhancedPrompt }] }],
     });
 
     const response = await result.response.text();
@@ -197,7 +252,7 @@ async function generateFilesFromPrompt(
 
 async function getPrompt(id: string) {
   try {
-    const prompt = await prisma.testID.findUnique({
+    const testData = await prisma.testID.findUnique({
       where: {
         id: id,
       },
@@ -205,11 +260,33 @@ async function getPrompt(id: string) {
         template: {
           select: {
             prompt: true,
+            language: true,
+            framework: true,
+            type: true,
           },
         },
       },
     });
-    const userPart = prompt?.template?.prompt;
+
+    const userPart = testData?.template?.prompt || "";
+    const language = testData?.template?.language || "";
+    const framework = testData?.template?.framework || "";
+    const questionType = testData?.template?.type || "";
+
+    // Add language and framework preferences to the prompt
+    let enhancedPrompt = userPart;
+
+    if (language) {
+      enhancedPrompt += `\n\nPlease use ${language} as the primary programming language for this problem.`;
+
+      if (framework) {
+        enhancedPrompt += ` Use the ${framework} framework.`;
+      }
+    }
+
+    if (questionType) {
+      enhancedPrompt += `\n\nThis is a ${questionType.toLowerCase()}.`;
+    }
 
     const schema = {
       type: "object",
@@ -244,7 +321,7 @@ async function getPrompt(id: string) {
     
     Make sure to escape newlines with \\n in the content.`;
 
-    return userPart + systemPart;
+    return enhancedPrompt + systemPart;
   } catch (error) {
     console.error(error);
     return null;
