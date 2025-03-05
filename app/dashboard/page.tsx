@@ -138,7 +138,7 @@ const Dashboard = () => {
           sentApplicants++;
         } else if (applicant.status == "Unsent") {
           unsentApplicants++;
-        } else if (applicant.status == "Completed") {
+        } else if (applicant.status == "Submitted") {
           completedApplicants++;
         } else if (applicant.status == "Expired") {
           expiredApplicants++;
