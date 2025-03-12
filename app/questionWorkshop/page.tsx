@@ -493,9 +493,9 @@ const QuestionWorkshop = () => {
         <Sidebar />
         <div className="flex-1 bg-slate-950">
           {/* Info Section */}
-          <div className="p-6 flex flex-col gap-6 mx-auto w-full">
+          <div className="p-6 pb-0 flex flex-col gap-6 mx-auto w-full">
             {questions.length < 1 && (
-              <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 items-center justify-between flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 mb-3">
+              <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 items-center justify-between flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
                 <div className="flex items-end gap-3">
                   <Image src={QuestionIcon} width={32} height={32} alt="Icon" />
                   <div>
