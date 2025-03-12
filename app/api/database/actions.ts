@@ -14,6 +14,11 @@ import { Question } from "@prisma/client";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+const baseUrl =
+  process.env.NODE_ENV === "production"
+    ? "https://skillbit.org"
+    : "http://localhost:3000";
+
 export async function addApplicant(
   firstName: string,
   lastName: string,
@@ -899,9 +904,7 @@ export async function assignTemplate(
                     <tbody>
                       <tr>
                         <td>
-                          <a href="${
-                            "http://localhost:3000/prescreen/" + applicant.id
-                          }"
+                          <a href="${baseUrl}/prescreen/${applicant.id}"
                              style="background-color:#008cff; border-radius:7px; color:#fff; font-size:16px; text-decoration:none; text-align:center; display:inline-block; margin:10px 0px; padding:12px 24px; line-height:100%; max-width:100%"
                              target="_blank">
                             <span style="max-width:100%; display:inline-block; line-height:120%; mso-padding-alt:0px; mso-text-raise:9px">Get started</span>
