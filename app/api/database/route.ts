@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+
 import {
   addUser,
   findUserByEmail,
@@ -32,6 +33,8 @@ import {
   getInstructions,
   assignSampleTemplate,
   getIsSample,
+  createJobRecord,
+  getCompanyJobsForCompany,
 } from "./actions";
 import { send } from "process";
 
@@ -79,7 +82,8 @@ export async function POST(req: Request) {
       data.lastName,
       data.email,
       data.recruiterEmail,
-      data.isSample
+      data.isSample,
+      data.jobId // <--- NEW
     );
     if (response == null) {
       return NextResponse.json(
@@ -147,7 +151,32 @@ export async function POST(req: Request) {
       );
     }
     return NextResponse.json({ message: response }, { status: 200 });
-  } else if (data.action === "findQuestions") {
+  }
+
+  // NEW JOB-RELATED ACTIONS (Refactored)
+  else if (data.action === "createJob") {
+    const { companyId, name } = data;
+    const newJob = await createJobRecord(companyId, name);
+    if (!newJob) {
+      return NextResponse.json(
+        { message: "Error creating job." },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json({ message: "Success", job: newJob }, { status: 200 });
+  } else if (data.action === "getCompanyJobs") {
+    const { companyId } = data;
+    const jobs = await getCompanyJobsForCompany(companyId);
+    if (!jobs) {
+      return NextResponse.json(
+        { message: "Error retrieving jobs." },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json({ message: jobs }, { status: 200 });
+  }
+
+  else if (data.action === "findQuestions") {
     const response = await findQuestions(data.company);
     if (response == null) {
       return NextResponse.json(
@@ -304,7 +333,8 @@ export async function POST(req: Request) {
     const response = await assignTemplate(
       data.applicantData,
       data.template,
-      data.company
+      data.company,
+      data.jobId  // <-- NEW: Pass jobId to actions
     );
     if (response == null) {
       return NextResponse.json(
