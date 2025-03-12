@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import prisma from "../database/prismaConnection";
+import { updateInstructions } from "../database/actions";
 
 // Import necessary modules from AWS SDK
 // @ts-nocheck
@@ -70,7 +71,10 @@ export async function POST(req: Request) {
 
       //Generate files for S3 bucket
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const files = await generateFilesFromPrompt(model, prompt);
+      const files = await generateFilesFromPrompt(
+        model,
+        `You are creating files for a technical problem that job applicants will solve. Here is the prompt: ${prompt}`
+      );
 
       if (!Array.isArray(files) || files.length === 0) {
         throw new Error("No files were generated from the prompt.");
@@ -113,6 +117,24 @@ export async function POST(req: Request) {
         : [];
 
       console.log("filesWithContent:", filesWithContent);
+
+      const instructionsPrompt = await getPromptInstructions(testId);
+
+      //creating instructions
+      const instructions = await generateInstructionsFromPrompt(
+        model,
+        `AI has generated files for a technical problem that job applicants will solve. Here is the prompt that generated said files: ${instructionsPrompt}. Now, create the instructions that the job applicants will see to solve the problem. For example, it could follow the form \'Your goal is to...\'`
+      );
+
+      //adding instructions to the db
+      const instructionsUpdated = await updateInstructions(
+        testId,
+        instructions
+      );
+
+      if (instructionsUpdated != "Success") {
+        throw new Error("Failed to update instructions in the database.");
+      }
 
       return NextResponse.json({ files: filesWithContent });
     }
@@ -162,7 +184,7 @@ async function generateFilesFromPrompt(
 
     const response = await result.response.text();
 
-    console.log("Raw response:", response);
+    console.log("Raw files:", response);
 
     // Clean the response to ensure it's valid JSON
     const cleanedResponse = response.replace(/```json|```/g, "").trim();
@@ -192,6 +214,38 @@ async function generateFilesFromPrompt(
   } catch (error: any) {
     console.error("Failed to generate files from prompt:", error);
     throw new Error("Failed to generate files from the prompt.");
+  }
+}
+
+async function generateInstructionsFromPrompt(
+  model: any,
+  prompt: string
+): Promise<string> {
+  try {
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    });
+
+    const response = await result.response.text();
+    console.log("Raw instructions:", response);
+
+    // Clean the response to ensure valid JSON (if applicable)
+    const cleanedResponse = response.replace(/```json|```/g, "").trim();
+
+    try {
+      const parsed = JSON.parse(cleanedResponse);
+      if (parsed.instructions) {
+        return parsed.instructions.replace(/\\n/g, "\n"); // Handle escaped newlines
+      }
+    } catch (jsonError) {
+      console.warn("Response was not JSON, returning raw text.");
+    }
+
+    // If not JSON, assume the response is the instruction text
+    return cleanedResponse;
+  } catch (error: any) {
+    console.error("Failed to generate instructions:", error);
+    throw new Error("Failed to generate instructions from the prompt.");
   }
 }
 
@@ -245,6 +299,29 @@ async function getPrompt(id: string) {
     Make sure to escape newlines with \\n in the content.`;
 
     return userPart + systemPart;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
+async function getPromptInstructions(id: string) {
+  try {
+    const prompt = await prisma.testID.findUnique({
+      where: {
+        id: id,
+      },
+      select: {
+        template: {
+          select: {
+            prompt: true,
+          },
+        },
+      },
+    });
+    const userPart = prompt?.template?.prompt;
+
+    return userPart;
   } catch (error) {
     console.error(error);
     return null;

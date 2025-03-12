@@ -20,14 +20,14 @@ interface TestIDInterface {
   firstName: string;
   lastName: string;
   email: string;
-  jobId?: string; // The job the candidate is assigned to
-  status: string; // "Sent" | "Unsent" | "Submitted" | "Expired"
+  status: string;
   score: string;
   submitted: boolean;
-  template?: Question;
-  expirationDate?: Date;
+  template: Question;
+  expirationDate: Date;
+  instructions: string;
+  jobId?: string; // The job the candidate is assigned to
 }
-
 interface Question {
   id: string;
   title: string;
@@ -38,6 +38,7 @@ interface Question {
   expiration: string;
   companyID: string;
   userId: string;
+  testIDs: Array<TestIDInterface>;
 }
 
 interface Job {
@@ -153,7 +154,7 @@ const Applicants = () => {
       const res = await fetch("/api/database", {
         method: "POST",
         headers: { "Content-type": "application/json" },
-        body: JSON.stringify({ action: "getApplicants", company: companyId }),
+        body: JSON.stringify({ action: "getApplicants", company: companyId, isSample: false }),
       });
       const data = await res.json();
 
@@ -233,6 +234,7 @@ const Applicants = () => {
           email,
           recruiterEmail: session?.user?.email || "",
           jobId,
+          isSample: false,
         }),
       });
       toast.remove();
@@ -292,6 +294,35 @@ const Applicants = () => {
     setFileInputKey((prev) => prev + 1);
   };
 
+  const updateApplicants = async (applicants: Array<TestIDInterface>) => {
+    try {
+      toast.loading("Importing applicant(s)...");
+      const response = await fetch("/api/database", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "addApplicants",
+          applicants: applicants,
+          recruiterEmail: email,
+          isSample: false,
+        }),
+      });
+      if (!response.ok) {
+        toast.remove();
+        toast.error("Error loading applicants.");
+      } else {
+        toast.remove();
+        toast.success("Loaded applicants.");
+        window.location.reload();
+      }
+    } catch (error) {
+      toast.remove();
+      toast.error("Error loading applicants.");
+      console.error(error);
+    }
+  };
   // -----------------------
   //   Delete multiple
   // -----------------------

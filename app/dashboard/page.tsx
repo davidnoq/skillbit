@@ -35,7 +35,6 @@ import Edit from "../../public/assets/icons/edit.svg";
 import exp from "constants";
 
 interface Question {
-  candidatePrompt: string;
   title: string;
   language: string;
   framework: string;
@@ -45,6 +44,7 @@ interface Question {
   companyID: string;
   userId: string;
   id: string;
+  testIDs: Array<TestIDInterface>;
 }
 
 interface Employee {
@@ -66,6 +66,7 @@ interface TestIDInterface {
   submitted: boolean;
   template: Question;
   expirationDate: Date;
+  instructions: string;
 }
 
 const Dashboard = () => {
@@ -122,6 +123,7 @@ const Dashboard = () => {
         body: JSON.stringify({
           action: "getApplicants",
           company: companyId,
+          isSample: false,
         }),
       });
       const data = await response.json();

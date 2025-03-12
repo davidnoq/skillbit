@@ -31,8 +31,23 @@ import SearchIcon from "../../public/assets/icons/search.svg";
 
 import Edit from "../../public/assets/icons/edit.svg";
 
+interface TestIDInterface {
+  companyID: string;
+  id: string;
+  selected: boolean;
+  created: Date;
+  firstName: string;
+  lastName: string;
+  email: string;
+  status: string;
+  score: string;
+  submitted: boolean;
+  template: Question;
+  expirationDate: Date;
+  instructions: string;
+}
+
 interface Question {
-  candidatePrompt: string;
   title: string;
   language: string;
   framework: string;
@@ -42,6 +57,7 @@ interface Question {
   companyID: string;
   userId: string;
   id: string;
+  testIDs: Array<TestIDInterface>;
 }
 
 interface Employee {

@@ -19,6 +19,7 @@ export async function addApplicant(
   lastName: string,
   email: string,
   recruiterEmail: string,
+  isSample: boolean = false,
   jobId?: string // <--- NEW
 ) {
   try {
@@ -45,6 +46,7 @@ export async function addApplicant(
           email: email,
           firstName: firstName,
           lastName: lastName,
+          isSample: isSample,
           company: {
             connect: {
               id: companyId,
@@ -60,7 +62,7 @@ export async function addApplicant(
         },
       });
 
-      return "Success";
+      return newApplicant.id;
     } else {
       return null;
     }
@@ -78,7 +80,8 @@ interface Applicant {
 
 export async function addApplicants(
   applicants: Array<Applicant>,
-  recruiterEmail: string
+  recruiterEmail: string,
+  isSample: boolean = false
 ) {
   try {
     //finding company id from recruiter email
@@ -109,6 +112,7 @@ export async function addApplicants(
                 id: companyId,
               },
             },
+            isSample: isSample,
           },
         });
       });
@@ -209,6 +213,13 @@ export async function findQuestions(companyId: string) {
           id: companyId,
         },
       },
+      include: {
+        testIDs: {
+          where: {
+            isSample: true,
+          },
+        },
+      },
     });
     return questions;
   } catch (error) {
@@ -220,8 +231,7 @@ export async function findQuestions(companyId: string) {
 export async function updateQuestion(
   id: string,
   title: string,
-  prompt: string,
-  candidatePrompt: string
+  prompt: string
 ) {
   try {
     const questions = await prisma.question.update({
@@ -231,7 +241,6 @@ export async function updateQuestion(
       data: {
         title: title,
         prompt: prompt,
-        candidatePrompt: candidatePrompt,
       },
     });
     return "Success";
@@ -636,18 +645,23 @@ export async function userSignIn(email: string, password: string) {
   }
 }
 
-export async function getApplicants(company: string) {
+export async function getApplicants(
+  company: string,
+  isSample: boolean = false
+) {
   try {
     const applicants = await prisma.testID.findMany({
       where: {
         company: {
           id: company,
         },
+        isSample: isSample,
       },
       include: {
         template: true,
       },
     });
+    console.log(applicants);
     return applicants;
   } catch (error) {
     console.error(error);
@@ -708,6 +722,57 @@ export async function markSubmitted(id: string) {
   }
 }
 
+export async function updateInstructions(id: string, instructions: string) {
+  try {
+    await prisma.testID.update({
+      where: {
+        id: id,
+      },
+      data: {
+        instructions: instructions,
+      },
+    });
+    return "Success";
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
+export async function getInstructions(id: string) {
+  try {
+    const applicants = await prisma.testID.findUnique({
+      where: {
+        id: id,
+      },
+      select: {
+        instructions: true,
+      },
+    });
+    return applicants;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
+export async function getIsSample(id: string) {
+  try {
+    const applicants = await prisma.testID.findUnique({
+      where: {
+        id: id,
+      },
+      select: {
+        isSample: true,
+      },
+    });
+    return applicants;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
 interface TestIDInterface {
   companyID: string;
   id: string;
@@ -721,6 +786,35 @@ interface TestIDInterface {
   submitted: boolean;
   template: Question;
   expirationDate: Date;
+  instructions: string;
+}
+
+export async function assignSampleTemplate(
+  applicantData: any,
+  templateID: string
+) {
+  try {
+    const promises = applicantData.map(async (applicant: any) => {
+      await prisma.testID.update({
+        where: {
+          id: applicant.message,
+        },
+        data: {
+          template: {
+            connect: {
+              id: templateID,
+            },
+          },
+        },
+      });
+    });
+    await Promise.all(promises);
+
+    return "Success";
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
 }
 
 export async function assignTemplate(

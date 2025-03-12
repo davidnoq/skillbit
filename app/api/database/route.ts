@@ -30,6 +30,9 @@ import {
   getIsExpired,
   getTestById,
   startTest,
+  getInstructions,
+  assignSampleTemplate,
+  getIsSample,
   createJobRecord,
   getCompanyJobsForCompany,
 } from "./actions";
@@ -79,6 +82,7 @@ export async function POST(req: Request) {
       data.lastName,
       data.email,
       data.recruiterEmail,
+      data.isSample,
       data.jobId // <--- NEW
     );
     if (response == null) {
@@ -88,9 +92,12 @@ export async function POST(req: Request) {
       );
     }
     return NextResponse.json({ message: response }, { status: 200 });
-  }
-   else if (data.action === "addApplicants") {
-    const response = await addApplicants(data.applicants, data.recruiterEmail);
+  } else if (data.action === "addApplicants") {
+    const response = await addApplicants(
+      data.applicants,
+      data.recruiterEmail,
+      data.isSample
+    );
     if (response == null) {
       return NextResponse.json(
         { message: "Error adding applicants." },
@@ -127,12 +134,7 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ message: response }, { status: 200 });
   } else if (data.action === "updateQuestion") {
-    const response = await updateQuestion(
-      data.id,
-      data.title,
-      data.prompt,
-      data.candidatePrompt
-    );
+    const response = await updateQuestion(data.id, data.title, data.prompt);
     if (response == null) {
       return NextResponse.json(
         { message: "Error updating question." },
@@ -312,8 +314,14 @@ export async function POST(req: Request) {
       );
     }
     return NextResponse.json({ message: response }, { status: 200 });
+  } else if (data.action === "getInstructions") {
+    const response = await getInstructions(data.id);
+    return NextResponse.json({ message: response }, { status: 200 });
+  } else if (data.action === "getIsSample") {
+    const response = await getIsSample(data.id);
+    return NextResponse.json({ message: response }, { status: 200 });
   } else if (data.action === "getApplicants") {
-    const response = await getApplicants(data.company);
+    const response = await getApplicants(data.company, data.isSample);
     return NextResponse.json({ message: response }, { status: 200 });
   } else if (data.action === "getIsSubmitted") {
     const response = await getIsSubmitted(data.id);
@@ -327,6 +335,18 @@ export async function POST(req: Request) {
       data.template,
       data.company,
       data.jobId  // <-- NEW: Pass jobId to actions
+    );
+    if (response == null) {
+      return NextResponse.json(
+        { message: "Error assigning templates." },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json({ message: response }, { status: 200 });
+  } else if (data.action === "assignSampleTemplate") {
+    const response = await assignSampleTemplate(
+      data.applicantData,
+      data.template
     );
     if (response == null) {
       return NextResponse.json(

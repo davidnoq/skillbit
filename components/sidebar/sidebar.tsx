@@ -30,7 +30,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import Dropdown from "../../public/assets/icons/dropdown.svg";
 
 interface Question {
-  candidatePrompt: string;
   title: string;
   language: string;
   framework: string;
@@ -40,6 +39,7 @@ interface Question {
   companyID: string;
   userId: string;
   id: string;
+  testIDs: Array<TestIDInterface>;
 }
 
 interface Employee {
@@ -61,6 +61,7 @@ interface TestIDInterface {
   submitted: boolean;
   template: Question;
   expirationDate: Date;
+  instructions: string;
 }
 
 const Sidebar = () => {
@@ -125,6 +126,7 @@ const Sidebar = () => {
         body: JSON.stringify({
           action: "getApplicants",
           company: companyId,
+          isSample: false,
         }),
       });
       const data = await response.json();
