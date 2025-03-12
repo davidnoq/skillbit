@@ -18,10 +18,11 @@ export async function addApplicant(
   firstName: string,
   lastName: string,
   email: string,
-  recruiterEmail: string
+  recruiterEmail: string,
+  jobId?: string // <--- NEW
 ) {
   try {
-    //finding company id from recruiter email
+    // 1) Find the company the recruiter belongs to
     const company = await prisma.user.findUnique({
       where: {
         email: recruiterEmail,
@@ -37,7 +38,8 @@ export async function addApplicant(
 
     if (company && company.employee) {
       const companyId = company.employee.companyID;
-      // Create a new test id record (INSTEAD OF APPLICANT)
+
+      // 2) Create a new testID with optional job connection
       const newApplicant = await prisma.testID.create({
         data: {
           email: email,
@@ -48,8 +50,16 @@ export async function addApplicant(
               id: companyId,
             },
           },
+          ...(jobId
+            ? {
+                job: {
+                  connect: { id: jobId },
+                },
+              }
+            : {}),
         },
       });
+
       return "Success";
     } else {
       return null;
@@ -211,7 +221,7 @@ export async function updateQuestion(
   id: string,
   title: string,
   prompt: string,
-  candidatePrompt: string,
+  candidatePrompt: string
 ) {
   try {
     const questions = await prisma.question.update({
@@ -716,18 +726,20 @@ interface TestIDInterface {
 export async function assignTemplate(
   applicantData: Array<TestIDInterface>,
   templateID: string,
-  company: string
+  company: string,
+  jobId?: string // <-- NEW: accept jobId
 ) {
   try {
     const template = await prisma.question.findUnique({
-      where: {
-        id: templateID,
-      },
+      where: { id: templateID },
     });
 
-    const expiration = new Date();
+    if (!template) {
+      return null;
+    }
 
-    switch (template?.expiration) {
+    const expiration = new Date();
+    switch (template.expiration) {
       case "1 day":
         expiration.setDate(expiration.getDate() + 1);
         break;
@@ -752,18 +764,15 @@ export async function assignTemplate(
       if (applicant.selected) {
         count++;
         await prisma.testID.update({
-          where: {
-            id: applicant.id,
-          },
+          where: { id: applicant.id },
           data: {
-            template: {
-              connect: {
-                id: templateID,
-              },
-            },
+            template: { connect: { id: templateID } },
             expirationDate: expiration,
+            // NEW: If jobId is provided, connect
+            ...(jobId ? { job: { connect: { id: jobId } } } : {}),
           },
         });
+
         try {
           const emailHtml = `
             <head>
@@ -941,5 +950,44 @@ export async function startTest(testId: string) {
   } catch (error) {
     console.error("Error starting test:", error);
     throw error;
+  }
+}
+export async function createJobRecord(companyId: string, name: string) {
+  try {
+    const newJob = await prisma.job.create({
+      data: {
+        name: name,
+        company: {
+          connect: {
+            id: companyId,
+          },
+        },
+      },
+    });
+    return newJob;
+  } catch (error) {
+    console.error("Error creating job:", error);
+    return null;
+  }
+}
+
+/**
+ * Retrieve all jobs for a given company.
+ * @param companyId The company's ID
+ * @returns An array of Jobs or null on error
+ */
+export async function getCompanyJobsForCompany(companyId: string) {
+  try {
+    const jobs = await prisma.job.findMany({
+      where: {
+        company: {
+          id: companyId,
+        },
+      },
+    });
+    return jobs;
+  } catch (error) {
+    console.error("Error retrieving jobs:", error);
+    return null;
   }
 }

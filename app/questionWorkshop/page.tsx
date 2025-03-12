@@ -1,36 +1,22 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useState, useRef, createRef } from "react";
+import { useEffect, useState, createRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Loader from "@/components/loader/loader";
 
-import Nav from "@/components/nav/nav";
 import Image from "next/image";
 import Arrow from "../../public/assets/icons/arrow.svg";
-import Demo from "../../public/assets/images/demo.png";
-import Logo from "../../public/assets/branding/logos/logo_mini_transparent_white.png";
-import Sidebar from "@/components/sidebar/sidebar";
-import { signOut, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import TopMenuBar from "@/components/topmenubar/topmenubar";
-import Dots from "../../public/assets/icons/dots.svg";
 import Plus from "../../public/assets/icons/plus.svg";
-import { Toaster, toast } from "react-hot-toast";
+import Dots from "../../public/assets/icons/dots.svg";
 import Dropdown from "../../public/assets/icons/dropdown.svg";
-
-// Dashboard icons
-import DashboardIcon from "../../public/assets/icons/dashboard.svg";
-import DashboardIconWhite from "../../public/assets/icons/dashboard_white.svg";
-import ApplicantsIcon from "../../public/assets/icons/applicants.svg";
-import CompanyIcon from "../../public/assets/icons/company.svg";
-import SupportIcon from "../../public/assets/icons/support.svg";
-import WorkshopIcon from "../../public/assets/icons/workshop.svg";
-import ProfileIcon from "../../public/assets/icons/profile.svg";
-import QuestionIcon from "../../public/assets/icons/question.svg";
-import SearchIcon from "../../public/assets/icons/search.svg";
-
 import Edit from "../../public/assets/icons/edit.svg";
+import QuestionIcon from "../../public/assets/icons/question.svg";
+
+import Sidebar from "@/components/sidebar/sidebar";
+import { useSession } from "next-auth/react";
+import { Toaster, toast } from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 interface Question {
   title: string;
@@ -44,65 +30,60 @@ interface Question {
   id: string;
 }
 
-const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
+interface Job {
+  id: string;
+  name: string;
+}
+
+const QuestionWorkshop = () => {
   const path = usePathname();
   const router = useRouter();
+  const { data: session, status } = useSession();
 
-  const [accountMenuVisible, setAccountMenuVisible] = useState(false);
-  const [newQuestionButton, setNewQuestionButton] = useState(false);
-  const [card, setCard] = useState(1);
   const [email, setEmail] = useState("");
-
   const [userCompanyName, setUserCompanyName] = useState<string | null>(null);
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
   const [userApprovalStatus, setUserApprovalStatus] = useState(false);
   const [companyDataLoaded, setCompanyDataLoaded] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [viewAdditionalSettings, setViewAdditionalSettings] = useState(false);
-  const [expiration, setExpiration] = useState("1 month");
 
-  const [deleteQuestionWarning, setDeleteQuestionWarning] = useState(false);
+  // Jobs for assigning a job to a new question
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [selectedJobId, setSelectedJobId] = useState<string>("");
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<Question>();
+  const [showQuestionOptions, setShowQuestionOptions] = useState("");
+
+  const [deleteQuestionWarning, setDeleteQuestionWarning] = useState(false);
+
+  const [newQuestionButton, setNewQuestionButton] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [title, setTitle] = useState("");
-  const [newTitle, setNewTitle] = useState("");
   const [language, setLanguage] = useState("");
   const [framework, setFramework] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [newPrompt, setNewPrompt] = useState("");
   const [type, setType] = useState("");
-  const [showQuestionOptions, setShowQuestionOptions] = useState("");
+  const [expiration, setExpiration] = useState("1 month");
+  const [viewAdditionalSettings, setViewAdditionalSettings] = useState(false);
+
+  // For updating an existing question
+  const [newTitle, setNewTitle] = useState("");
+  const [newPrompt, setNewPrompt] = useState("");
 
   const questionTitleRef = createRef<HTMLInputElement>();
 
-  const { data: session, status } = useSession();
-
-  // ***** Updated logic for the Dashboard button *****
+  // Logic to decide if we show "Back to Dashboard" button
   const [showDashboardButton, setShowDashboardButton] = useState(false);
 
-  // Whenever the questions array changes, decide if we should show the button
-  useEffect(() => {
-    if (questions.length > 1) {
-      setShowDashboardButton(true);
-    } else {
-      setShowDashboardButton(false);
-    }
-  }, [questions]);
-
-  const handleDashboardButtonClick = () => {
-    router.push("/dashboard");
-  };
-  // ***** End of updated logic for Dashboard Button *****
-
+  // ------------------------------
+  //   1) Fetch Questions from DB
+  // ------------------------------
   const findQuestions = async (company: string) => {
     try {
       const response = await fetch("/api/database", {
         method: "POST",
-        headers: {
-          "Content-type": "application/json",
-        },
+        headers: { "Content-type": "application/json" },
         body: JSON.stringify({
           action: "findQuestions",
           company: company,
@@ -110,22 +91,48 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
       });
       const data = await response.json();
       setQuestions(data.message.reverse());
-      setCurrentQuestion(data.message[0]);
-      setNewTitle(data.message[0]?.title || "");
-      setNewPrompt(data.message[0]?.prompt || "");
+      if (data.message.length > 0) {
+        setCurrentQuestion(data.message[0]);
+        setNewTitle(data.message[0].title || "");
+        setNewPrompt(data.message[0].prompt || "");
+      }
     } catch (error) {
       console.error("Error finding questions: ", error);
     }
   };
 
+  // ------------------------------
+  //   2) Fetch Jobs from DB
+  // ------------------------------
+  const getCompanyJobs = async (companyId: string) => {
+    try {
+      toast.loading("Loading Jobs...");
+      const response = await fetch("/api/database", {
+        method: "POST",
+        headers: { "Content-type": "application/json" },
+        body: JSON.stringify({
+          action: "getCompanyJobs",
+          companyId,
+        }),
+      });
+      toast.remove();
+      const data = await response.json();
+      setJobs(data.message || []);
+    } catch (error) {
+      toast.remove();
+      console.error("Error fetching jobs:", error);
+    }
+  };
+
+  // ------------------------------
+  //   3) Delete & Update
+  // ------------------------------
   const deleteQuestion = async (id: string) => {
     toast.loading("Deleting question...");
     try {
-      const response = await fetch("/api/database", {
+      await fetch("/api/database", {
         method: "POST",
-        headers: {
-          "Content-type": "application/json",
-        },
+        headers: { "Content-type": "application/json" },
         body: JSON.stringify({
           action: "deleteQuestion",
           id: id,
@@ -146,23 +153,19 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
     setIsSaving(true);
     if (
       currentQuestion &&
-      questions.find((question) => question.title === newTitle) &&
+      questions.find((q) => q.title === newTitle) &&
       newTitle !== currentQuestion.title
     ) {
       toast.remove();
-      toast.error(
-        "Title already exists. Please choose a unique template title."
-      );
+      toast.error("Title already exists. Please choose a unique template title.");
     } else if (newTitle === "") {
       toast.remove();
       toast.error("Please enter a title.");
     } else {
       try {
-        const response = await fetch("/api/database", {
+        await fetch("/api/database", {
           method: "POST",
-          headers: {
-            "Content-type": "application/json",
-          },
+          headers: { "Content-type": "application/json" },
           body: JSON.stringify({
             action: "updateQuestion",
             id: id,
@@ -179,15 +182,25 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
     setIsSaving(false);
   };
 
+  // ------------------------------
+  //   4) Add a New Question
+  // ------------------------------
   const addQuestion = async () => {
-    // framework can be ""
-    if (title !== "" && language !== "" && type !== "") {
+    // Check if a job is selected
+    if (!selectedJobId) {
+      toast.remove();
+      toast.error(
+        "A job must be chosen before you can create this template. Please create a job first if you have none."
+      );
+      return;
+    }
+
+    // Basic validation
+    if (title && language && type) {
       try {
         const response = await fetch("/api/database", {
           method: "POST",
-          headers: {
-            "Content-type": "application/json",
-          },
+          headers: { "Content-type": "application/json" },
           body: JSON.stringify({
             action: "addQuestion",
             email: email,
@@ -197,6 +210,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
             prompt: prompt,
             type: type,
             expiration: expiration,
+            // jobId: selectedJobId,   <-- If your schema uses jobId on the question model
           }),
         });
         const data = await response.json();
@@ -209,12 +223,13 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
           setPrompt("");
           setType("");
           setExpiration("1 month");
+          setSelectedJobId("");
           setViewAdditionalSettings(false);
           setNewQuestionButton(false);
           await findQuestions(userCompanyId || "");
         } else if (
           data.message ===
-          "Title already exists. Please choose a unique template title."
+          "Title already exists. Please choose a unique question title."
         ) {
           toast.remove();
           toast.error(data.message);
@@ -225,29 +240,26 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
       }
     } else {
       toast.remove();
-      if (title === "") {
-        toast.error("Please choose a title.");
-      }
-      if (language === "") {
-        toast.error("Please choose a language and framework.");
-      }
-      if (type === "") {
-        toast.error("Please choose a type.");
-      }
+      if (!title) toast.error("Please choose a title.");
+      if (!language) toast.error("Please choose a language and framework.");
+      if (!type) toast.error("Please choose a type.");
     }
   };
 
+  // ------------------------------
+  //   5) useEffect to load data
+  // ------------------------------
   useEffect(() => {
     const getData = async () => {
       if (session) {
         toast.remove();
         toast.loading("Looking for questions...");
+
         setEmail(session.user?.email || "");
+        // 1) Find user by email
         const userResponse = await fetch("/api/database", {
           method: "POST",
-          headers: {
-            "Content-type": "application/json",
-          },
+          headers: { "Content-type": "application/json" },
           body: JSON.stringify({
             action: "findUserByEmail",
             email: session.user?.email,
@@ -255,6 +267,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
         });
         const userData = await userResponse.json();
 
+        // 2) If user is in a company
         if (
           userData.message.employee &&
           userData.message.employee.company.name &&
@@ -264,7 +277,10 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
           setUserCompanyName(userData.message.employee.company.name);
           setUserCompanyId(userData.message.employee.company.id);
           setUserApprovalStatus(userData.message.employee.isApproved);
+
           await findQuestions(userData.message.employee.company.id);
+          // Also fetch jobs for the new "must pick a job" requirement
+          await getCompanyJobs(userData.message.employee.company.id);
         }
         setCompanyDataLoaded(true);
         toast.remove();
@@ -275,46 +291,46 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
     }
   }, [session, status]);
 
+  // Update whether to show dashboard button
+  useEffect(() => {
+    if (questions.length > 1) setShowDashboardButton(true);
+    else setShowDashboardButton(false);
+  }, [questions]);
+
+  // ------------------------------
+  //  Rendering & Conditions
+  // ------------------------------
   if (status === "loading") {
-    return <Loader></Loader>;
+    return <Loader />;
   }
   if (status === "unauthenticated") {
     router.push("/auth");
-    return;
+    return null;
   }
+
+  const handleDashboardButtonClick = () => {
+    router.push("/dashboard");
+  };
 
   return (
     <>
-      <Toaster position="top-right"></Toaster>
+      <Toaster position="top-right" />
       <div className="flex text-white overflow-x-hidden min-h-screen">
         <Sidebar />
         <div className="flex-1 bg-slate-950">
-          {/* Enhanced Info Section */}
-          <div className="p-6 flex flex-col gap-6  mx-auto w-full">
+          {/* Info Section */}
+          <div className="p-6 flex flex-col gap-6 mx-auto w-full">
             <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 items-center justify-between flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 mb-3">
-              {/* Left Section: Icon and Text */}
-
-              {/* Left Section: Info */}
-              <div className="flex items-center gap-3">
-                <Image
-                  src={QuestionIcon}
-                  width={32}
-                  height={32}
-                  alt="Info Icon"
-                />
+              <div className="flex items-end gap-3">
+                <Image src={QuestionIcon} width={32} height={32} alt="Icon" />
                 <div>
-                  <h2 className="text-lg font-semibold text-white">
-                    What is this Assessment Builder?
-                  </h2>
+                  <h2 className="text-lg font-semibold text-white">Assessment Builder</h2>
                   <p className="text-sm text-slate-400">
-                    This is your tool for building customized question
-                    templates, tailored by AI to suit specific needs and
-                    preferences.
+                    Build customized question templates for your candidates!
                   </p>
                 </div>
               </div>
 
-              {/* Right Section: Button */}
               {questions.length > 0 && (
                 <motion.button
                   className="bg-indigo-600 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors duration-200 animate-glow"
@@ -327,9 +343,8 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
               )}
             </div>
           </div>
-          {/* End of Enhanced Info Section */}
 
-          {/* Dashboard content */}
+          {/* If still loading company info */}
           {!companyDataLoaded && (
             <div className="flex justify-center items-center scale-150 mt-6">
               <div className="lds-ring">
@@ -340,6 +355,8 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
               </div>
             </div>
           )}
+
+          {/* If user has a company & is approved */}
           {companyDataLoaded && userApprovalStatus && (
             <div className="p-6">
               <div className="flex flex-col lg:flex-row gap-6">
@@ -356,6 +373,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                         setFramework("");
                         setPrompt("");
                         setType("");
+                        setSelectedJobId("");
                       }}
                       aria-label="Add New Template"
                     >
@@ -394,6 +412,8 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                               }}
                             />
                           </div>
+
+                          {/* question options dropdown */}
                           {showQuestionOptions === question.id && (
                             <motion.div
                               className="flex flex-col bg-slate-800 border border-slate-700 rounded-lg absolute z-20 right-0 mt-1 w-32"
@@ -417,6 +437,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setDeleteQuestionWarning(true);
+                                  setCurrentQuestion(question);
                                 }}
                               >
                                 <p>Delete</p>
@@ -432,15 +453,15 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                     )}
                   </div>
                 </div>
-                {/* End of Templates List */}
 
                 {/* Question Details */}
                 <div className="rounded-xl bg-slate-900 border border-slate-800 p-6 w-full lg:w-2/3">
                   <div className="min-h-[60vh]">
                     {currentQuestion ? (
                       <div className="flex flex-col justify-between h-full">
-                        {/* Question Header */}
+                        {/* Header */}
                         <div>
+                          {/* Edit Title */}
                           <div className="flex items-end gap-2">
                             <input
                               className="border-b border-slate-800 bg-transparent outline-none placeholder:text-white font-bold text-2xl w-full"
@@ -450,13 +471,9 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                               value={newTitle}
                               placeholder="Question Title"
                             />
-                            <Image
-                              src={Edit}
-                              alt="Edit title"
-                              width={14}
-                              height={14}
-                            />
+                            <Image src={Edit} alt="Edit title" width={14} height={14} />
                           </div>
+                          {/* Language & Type */}
                           <div className="flex flex-wrap gap-3 mt-3">
                             <span className="px-2 py-1 rounded-lg border border-slate-700 bg-slate-800">
                               {currentQuestion.language}
@@ -470,14 +487,13 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                               {currentQuestion.type}
                             </span>
                           </div>
+
+                          {/* Prompt */}
                           <div className="mt-3">
-                            <h2 className="text-lg font-semibold">
-                              Template Prompt
-                            </h2>
+                            <h2 className="text-lg font-semibold">Template Prompt</h2>
                             <p className="text-sm text-slate-400">
-                              This open-ended prompt is being used to help
-                              generate your templates. Candidates will not see
-                              this.
+                              This open-ended prompt is used to generate your
+                              template. Candidates will not see this.
                             </p>
                             <textarea
                               placeholder="Generate a todo list application with 5 errors..."
@@ -486,18 +502,17 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                               value={newPrompt}
                             />
                           </div>
+
+                          {/* Expiration */}
                           <div className="mt-3 flex items-center gap-2">
-                            <h2 className="text-lg font-semibold">
-                              Expiration:
-                            </h2>
+                            <h2 className="text-lg font-semibold">Expiration:</h2>
                             <span className="bg-slate-800 border border-slate-700 py-1 px-2 rounded-xl">
                               {currentQuestion.expiration}
                             </span>
                           </div>
                         </div>
-                        {/* End of Question Header */}
 
-                        {/* Save Changes Button */}
+                        {/* Save Button */}
                         <AnimatePresence>
                           {(currentQuestion.title !== newTitle ||
                             currentQuestion.prompt !== newPrompt) && (
@@ -522,9 +537,9 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                             </motion.button>
                           )}
                         </AnimatePresence>
-                        {/* End of Save Changes Button */}
                       </div>
                     ) : (
+                      // If no questions exist or none selected
                       <div className="flex justify-center items-center flex-col text-center min-h-[60vh]">
                         <h1 className="text-2xl font-semibold mb-2">
                           Welcome to the Assessment Builder!
@@ -543,10 +558,11 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                     )}
                   </div>
                 </div>
-                {/* End of Question Details */}
               </div>
             </div>
           )}
+
+          {/* If user has a company but not approved */}
           {companyDataLoaded && !userApprovalStatus && (
             <div className="p-6 flex justify-center items-center flex-col w-full text-center">
               <div className="bg-gradient-to-b from-indigo-600 to-transparent w-full rounded-xl p-6 py-20 mb-20"></div>
@@ -554,8 +570,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                 Welcome to the Assessment Builder!
               </h1>
               <p className="text-slate-400 mb-4">
-                To get started, please join a company in the Company Profile
-                tab.
+                To get started, please join a company in the Company Profile tab.
               </p>
               <motion.button
                 className="bg-indigo-600 px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors duration-200 mt-3"
@@ -603,6 +618,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                   exit={{ opacity: 0, y: 30 }}
                   transition={{ duration: 0.5, ease: "backOut" }}
                 >
+                  {/* Close Modal */}
                   <div className="flex justify-end">
                     <motion.button
                       className="bg-slate-900 border border-slate-800 p-2 rounded-full flex justify-center items-center"
@@ -625,6 +641,8 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                       />
                     </motion.button>
                   </div>
+
+                  {/* Modal Content */}
                   <div className="flex flex-col gap-6">
                     <div className="flex flex-col">
                       <h1 className="text-2xl font-semibold">
@@ -636,6 +654,8 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                         candidate skills.
                       </p>
                     </div>
+
+                    {/* (A) Template Title */}
                     <div className="flex flex-col">
                       <h2 className="text-lg font-semibold">Assessment Name</h2>
                       <p className="text-slate-400">
@@ -649,19 +669,20 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                         value={title}
                       />
                     </div>
+
+                    {/* (B) Language & Framework */}
                     <div className="flex flex-col">
                       <h2 className="text-lg font-semibold">
                         Programming Language and Framework
                       </h2>
                       <p className="text-slate-400">
-                        Your questions will test candidates using the
-                        programming language or framework you choose.
+                        Your questions will test candidates using the language
+                        or framework you choose.
                       </p>
                       <div className="flex flex-wrap gap-3 mt-3">
                         <div
                           className={`rounded-xl border ${
-                            language === "JavaScript" &&
-                            framework === "React JS"
+                            language === "JavaScript" && framework === "React JS"
                               ? "bg-indigo-600 border-indigo-600"
                               : "bg-slate-800 border-slate-700 hover:bg-slate-700"
                           } p-3 cursor-pointer transition-colors duration-100`}
@@ -674,8 +695,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                         </div>
                         <div
                           className={`rounded-xl border ${
-                            language === "TypeScript" &&
-                            framework === "React JS"
+                            language === "TypeScript" && framework === "React JS"
                               ? "bg-indigo-600 border-indigo-600"
                               : "bg-slate-800 border-slate-700 hover:bg-slate-700"
                           } p-3 cursor-pointer transition-colors duration-100`}
@@ -727,11 +747,12 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                         </div>
                       </div>
                     </div>
+
+                    {/* (C) Question Type */}
                     <div className="flex flex-col">
                       <h2 className="text-lg font-semibold">Question Type</h2>
                       <p className="text-slate-400">
-                        We will use this to help generate your template and give
-                        candidates an idea of what to expect.
+                        We use this to help generate your template.
                       </p>
                       <div className="flex flex-wrap gap-3 mt-3">
                         <div
@@ -786,11 +807,13 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                         </div>
                       </div>
                     </div>
+
+                    {/* (D) Template Prompt */}
                     <div className="flex flex-col">
                       <h2 className="text-lg font-semibold">Template Prompt</h2>
                       <p className="text-slate-400">
-                        We will use this open-ended prompt to help generate your
-                        template. Candidates will not see this.
+                        This is used to help generate your template. Candidates
+                        won’t see this.
                       </p>
                       <textarea
                         placeholder="Generate a todo list application with 5 errors..."
@@ -799,6 +822,8 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                         value={prompt}
                       />
                     </div>
+
+                    {/* (E) Additional Settings */}
                     <div className="flex flex-col">
                       <div
                         className="flex justify-between items-center cursor-pointer"
@@ -828,9 +853,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                           transition={{ duration: 0.3 }}
                         >
                           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                            <p className="whitespace-nowrap">
-                              Test expires in:
-                            </p>
+                            <p className="whitespace-nowrap">Test expires in:</p>
                             <select
                               id="expiration"
                               value={expiration}
@@ -851,16 +874,47 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                         </motion.div>
                       )}
                     </div>
+
+                    {/* (F) Must Choose a Job */}
+                    <div className="flex flex-col">
+                      <h2 className="text-lg font-semibold">Assign to a Job</h2>
+                      <p className="text-slate-400">
+                        A job must be chosen before creating this template. If
+                        you have no jobs, create one first.
+                      </p>
+                      {jobs && jobs.length > 0 ? (
+                        <select
+                          className="mt-3 bg-slate-800 border border-slate-700 rounded-xl px-2 py-1 outline-none"
+                          value={selectedJobId}
+                          onChange={(e) => setSelectedJobId(e.target.value)}
+                        >
+                          <option value="">Choose a job...</option>
+                          {jobs.map((j) => (
+                            <option key={j.id} value={j.id}>
+                              {j.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p className="text-red-400 mt-3">
+                          No jobs found. Please create a job in Company Profile first.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* (G) Create Assessment */}
                     <motion.button
                       className="bg-indigo-600 px-6 py-3 rounded-lg flex justify-center items-center hover:bg-indigo-700 transition-colors duration-200"
                       initial={{ opacity: 0, y: 30 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.5, ease: "backOut" }}
                       onClick={addQuestion}
+                      // disable button if no jobs
+                      disabled={jobs.length === 0}
                     >
                       Create Assessment
                       <div className="flex items-center justify-center ml-2">
-                        <div className="arrowMiddle"></div>
+                        <div className="arrowMiddle" />
                         <Image
                           src={Arrow}
                           alt="Arrow"
@@ -885,6 +939,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                transition={{ duration: 0.5, ease: "backOut" }}
               >
                 <motion.div
                   className="bg-slate-900 p-6 rounded-xl border border-slate-800 w-full max-w-md"

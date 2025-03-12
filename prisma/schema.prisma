@@ -72,17 +72,19 @@ model testID {
   created        DateTime  @default(now())
   templateID     String?
   expirationDate DateTime?
+  jobId          String?
   id             String    @id @unique @default(cuid())
   email          String
   firstName      String
   lastName       String
   score          String?
-  status         String    @default("Unsent")
+  status         String    @default("Not Sent")
   submitted      Boolean   @default(false)
   endTime        DateTime?
   startTime      DateTime?
   company        Company   @relation(fields: [companyID], references: [id], onDelete: Cascade)
   template       Question? @relation(fields: [templateID], references: [id], onDelete: Cascade)
+  job            Job?      @relation(fields: [jobId], references: [id], onDelete: Cascade)
 }
 
 model Question {
@@ -108,4 +110,14 @@ model Company {
   employees Employee[]
   questions Question[]
   testIDs   testID[]
+  jobs      Job[] 
+}
+model Job {
+  id        String    @id @default(cuid())
+  name      String
+  companyId String
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  applicants testID[] // <--- NEW: each Job can have multiple applicants (testIDs)
 }

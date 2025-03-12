@@ -1,7 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { FormEvent, useEffect, useState, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Loader from "@/components/loader/loader";
 
@@ -12,13 +12,12 @@ import Demo from "../../public/assets/images/demo.png";
 import Logo from "../../public/assets/branding/logos/logo_mini_transparent_white.png";
 import Sidebar from "@/components/sidebar/sidebar";
 import { signOut, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import TopMenuBar from "@/components/topmenubar/topmenubar";
 import Plus from "../../public/assets/icons/plus.svg";
 import Check from "../../public/assets/icons/check.svg";
 import Cancel from "../../public/assets/icons/cancel.svg";
 
-//dashboard icons
+// dashboard icons
 import DashboardIcon from "../../public/assets/icons/dashboard.svg";
 import DashboardIconWhite from "../../public/assets/icons/dashboard_white.svg";
 import ApplicantsIcon from "../../public/assets/icons/applicants.svg";
@@ -41,14 +40,22 @@ interface Employee {
   email: string;
 }
 
+// NEW: Interface for Job
+interface Job {
+  id: string;
+  name: string;
+}
+
 const CompanyProfile = () => {
   const path = usePathname();
   const router = useRouter();
 
   const [accountMenuVisible, setAccountMenuVisible] = useState(false);
-  const [userCompanyName, setUserCompanyName] = useState(null);
-  const [userCompanyJoinCode, setUserCompanyJoinCode] = useState(null);
-  const [userCompanyId, setUserCompanyId] = useState(null);
+  const [userCompanyName, setUserCompanyName] = useState<string | null>(null);
+  const [userCompanyJoinCode, setUserCompanyJoinCode] = useState<string | null>(
+    null
+  );
+  const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [joinCompany, setJoinCompany] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -59,6 +66,15 @@ const CompanyProfile = () => {
   const [recruiterRequests, setRecruiterRequests] = useState<Employee[]>([]);
   const [userApprovalStatus, setUserApprovalStatus] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
+
+  // NEW: States for Jobs
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [newJobName, setNewJobNameState] = useState("");
+  const [showAddJobModal, setShowAddJobModal] = useState(false);
+
+  // -------------
+  // Fetch Calls
+  // -------------
 
   const findCompanies = async () => {
     const response = await fetch("/api/database", {
@@ -72,69 +88,6 @@ const CompanyProfile = () => {
     });
     const data = await response.json();
     setCompanies(data.message);
-  };
-
-  const handleCompanyEnroll = async (e: FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    if (
-      newCompanyName == "" ||
-      newCompanyName == null ||
-      newCompanyName == undefined
-    ) {
-      toast.remove();
-      toast.error('Please fill in the "Company Name" field.');
-      setIsLoading(false);
-    } else {
-      const response = await fetch("/api/database", {
-        method: "POST",
-        headers: {
-          "Content-type": "application/json",
-        },
-        body: JSON.stringify({
-          action: "addCompany",
-          email: email,
-          company: newCompanyName,
-        }),
-      });
-      setIsLoading(false);
-      toast.remove();
-      toast.success("Company added!");
-
-      location.href = "/dashboard";
-    }
-  };
-
-  const handleApproveRecruiter = async (userEmail: string) => {
-    toast.loading("Approving recruiter...");
-    const response = await fetch("/api/database", {
-      method: "POST",
-      headers: {
-        "Content-type": "application/json",
-      },
-      body: JSON.stringify({
-        action: "approveRecruiter",
-        email: userEmail,
-        company: userCompanyId,
-      }),
-    });
-    location.reload();
-  };
-
-  const handleDenyRecruiter = async (userEmail: string) => {
-    toast.loading("Denying recruiter...");
-    const response = await fetch("/api/database", {
-      method: "POST",
-      headers: {
-        "Content-type": "application/json",
-      },
-      body: JSON.stringify({
-        action: "denyRecruiter",
-        email: userEmail,
-        company: userCompanyId,
-      }),
-    });
-    location.reload();
   };
 
   const findRecruiterRequests = async (companyId: string) => {
@@ -167,6 +120,135 @@ const CompanyProfile = () => {
     setEmployees(data.message);
   };
 
+  // NEW: Fetch jobs for the company
+  const getJobs = async (companyId: string) => {
+    toast.loading("Loading jobs...");
+    const response = await fetch("/api/database", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "getCompanyJobs",
+        companyId,
+      }),
+    });
+    toast.remove();
+    const data = await response.json();
+    setJobs(data.message || []);
+  };
+
+  useEffect(() => {
+    const getData = async () => {
+      if (session) {
+        toast.remove();
+        toast.loading("Looking for company...");
+        setEmail(session.user?.email || "");
+
+        // 1) Fetch user by email
+        const userResponse = await fetch("/api/database", {
+          method: "POST",
+          headers: {
+            "Content-type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "findUserByEmail",
+            email: session.user?.email,
+          }),
+        });
+        const userData = await userResponse.json();
+        // 2) If user has a company, set relevant data
+
+        if (
+          userData.message.employee &&
+          userData.message.employee.company.name &&
+          userData.message.employee.company.join_code &&
+          userData.message.employee.company.id &&
+          userData.message.employee.isApproved != null
+        ) {
+          setUserCompanyName(userData.message.employee.company.name);
+          setUserCompanyJoinCode(userData.message.employee.company.join_code);
+          setUserCompanyId(userData.message.employee.company.id);
+          setUserApprovalStatus(userData.message.employee.isApproved);
+
+          // Additional calls
+          await findRecruiterRequests(userData.message.employee.company.id);
+          await findEmployees(userData.message.employee.company.id);
+          await getJobs(userData.message.employee.company.id);
+        }
+
+        // 3) Retrieve overall list of companies
+        await findCompanies();
+
+        setCompanyDataLoaded(true);
+        toast.remove();
+      }
+    };
+    if (status === "authenticated") {
+      getData();
+    }
+  }, []);
+
+  // -------------
+  // UI Handlers
+  // -------------
+
+  const handleCompanyEnroll = async (e: FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    if (!newCompanyName) {
+      toast.remove();
+      toast.error('Please fill in the "Company Name" field.');
+      setIsLoading(false);
+    } else {
+      const response = await fetch("/api/database", {
+        method: "POST",
+        headers: {
+          "Content-type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "addCompany",
+          email: email,
+          company: newCompanyName,
+        }),
+      });
+      setIsLoading(false);
+      toast.remove();
+      toast.success("Company added!");
+      location.href = "/dashboard";
+    }
+  };
+
+  const handleApproveRecruiter = async (userEmail: string) => {
+    toast.loading("Approving recruiter...");
+    await fetch("/api/database", {
+      method: "POST",
+      headers: {
+        "Content-type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "approveRecruiter",
+        email: userEmail,
+        company: userCompanyId,
+      }),
+    });
+    location.reload();
+  };
+
+  const handleDenyRecruiter = async (userEmail: string) => {
+    toast.loading("Denying recruiter...");
+    await fetch("/api/database", {
+      method: "POST",
+      headers: {
+        "Content-type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "denyRecruiter",
+        email: userEmail,
+        company: userCompanyId,
+      }),
+    });
+    location.reload();
+  };
+
   const handleJoinCompany = async (companyId: string) => {
     toast.loading("Joining company...");
     const response = await fetch("/api/database", {
@@ -191,7 +273,7 @@ const CompanyProfile = () => {
 
   const handleLeaveCompany = async (companyId: string) => {
     toast.loading("Leaving company...");
-    const response = await fetch("/api/database", {
+    await fetch("/api/database", {
       method: "POST",
       headers: {
         "Content-type": "application/json",
@@ -204,6 +286,46 @@ const CompanyProfile = () => {
     });
     location.reload();
   };
+
+  // NEW: create a job for the company
+  const handleCreateJob = async (e: FormEvent) => {
+    e.preventDefault();
+
+    if (!newJobName) {
+      toast.error("Please enter a job name.");
+      return;
+    }
+    if (!userCompanyId) {
+      toast.error("No company found.");
+      return;
+    }
+
+    toast.loading("Creating job...");
+    const response = await fetch("/api/database", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "createJob",
+        companyId: userCompanyId,
+        name: newJobName,
+      }),
+    });
+    toast.remove();
+    const data = await response.json();
+    if (data.message === "Success") {
+      toast.success("Job created!");
+      setShowAddJobModal(false);
+      setNewJobNameState("");
+      // refresh the job list
+      getJobs(userCompanyId);
+    } else {
+      toast.error("Error creating job.");
+    }
+  };
+
+  // -------------
+  // Join Code Inputs
+  // -------------
 
   const inputs = useRef<Array<HTMLInputElement | null>>([]);
 
@@ -242,68 +364,33 @@ const CompanyProfile = () => {
   };
 
   const { data: session, status } = useSession();
-
   useEffect(() => {
-    const getData = async () => {
-      if (session) {
-        toast.remove();
-        toast.loading("Looking for company...");
-        // console.log("Hello world!");
-        //other than print hello world, set user data here
-        setEmail(session.user?.email || "");
-        const userResponse = await fetch("/api/database", {
-          method: "POST",
-          headers: {
-            "Content-type": "application/json",
-          },
-          body: JSON.stringify({
-            action: "findUserByEmail",
-            email: session.user?.email,
-          }),
-        });
-        const userData = await userResponse.json();
-        if (
-          userData.message.employee &&
-          userData.message.employee.company.name &&
-          userData.message.employee.company.join_code &&
-          userData.message.employee.company.id &&
-          userData.message.employee.isApproved != null
-        ) {
-          setUserCompanyName(userData.message.employee.company.name);
-          setUserCompanyJoinCode(userData.message.employee.company.join_code);
-          setUserCompanyId(userData.message.employee.company.id);
-          setUserApprovalStatus(userData.message.employee.isApproved);
-          await findRecruiterRequests(userData.message.employee.company.id);
-          await findEmployees(userData.message.employee.company.id);
-        }
-        await findCompanies();
-        setCompanyDataLoaded(true);
-        toast.remove();
-      }
-    };
     if (status === "authenticated") {
-      getData();
+      // already handled in getData() above
     }
-  }, [session, status]);
+  }, [status]);
+
   if (status === "loading") {
-    return <Loader></Loader>;
+    return <Loader />;
   }
+
   if (status === "unauthenticated") {
     router.push("/auth");
-    return;
+    return null;
   }
+
   return (
     <>
-      <Toaster position="top-right"></Toaster>
+      <Toaster position="top-right" />
       <div className="max-w-screen text-white flex overflow-x-hidden">
-        <Sidebar></Sidebar>
+        <Sidebar />
         <div className="bg-slate-950 flex-1">
-          {/* <TopMenuBar></TopMenuBar> */}
-          {/* Dashboard content */}
           <div className="p-6 relative">
             <div className="flex justify-between items-center pb-6">
               <h2>Company Profile</h2>
             </div>
+
+            {/* Loading Spinner */}
             {!companyDataLoaded && (
               <div className="flex justify-center items-center scale-150">
                 <div className="lds-ring">
@@ -314,6 +401,8 @@ const CompanyProfile = () => {
                 </div>
               </div>
             )}
+
+            {/* If no company or user not in company */}
             {companyDataLoaded && (!userCompanyName || !userCompanyId) && (
               <div className="m-auto flex justify-center items-center flex-col">
                 {/* NEW COMPANY MENU */}
@@ -346,7 +435,7 @@ const CompanyProfile = () => {
                           height={14}
                           className="rotate-45"
                           alt="Exit"
-                        ></Image>
+                        />
                       </motion.button>
                       <motion.form
                         className="bg-slate-900 p-6 rounded-xl border border-slate-800"
@@ -398,7 +487,7 @@ const CompanyProfile = () => {
                           {!isLoading && (
                             <>
                               Enroll{" "}
-                              <div className=" arrow flex items-center justify-center">
+                              <div className="arrow flex items-center justify-center">
                                 <div className="arrowMiddle"></div>
                                 <div>
                                   <Image
@@ -407,7 +496,7 @@ const CompanyProfile = () => {
                                     width={14}
                                     height={14}
                                     className="arrowSide"
-                                  ></Image>
+                                  />
                                 </div>
                               </div>
                             </>
@@ -460,13 +549,15 @@ const CompanyProfile = () => {
                     New company
                     <div className="flex items-center justify-center">
                       <div>
-                        <Image src={Plus} alt="" width={14} height={14}></Image>
+                        <Image src={Plus} alt="" width={14} height={14} />
                       </div>
                     </div>
                   </button>
                 </div>
               </div>
             )}
+
+            {/* If user has a company & is approved */}
             {companyDataLoaded &&
               userCompanyName &&
               userCompanyJoinCode &&
@@ -482,8 +573,8 @@ const CompanyProfile = () => {
                   </p>
                   <div className="mt-6 pt-6 border-t border-slate-800">
                     <h2>Team Management</h2>
-                    <div className="flex gap-6">
-                      <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 mt-3 flex-1">
+                    <div className="flex flex-col lg:flex-row gap-6 mt-3">
+                      <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 flex-1">
                         <h1>Recruiter Requests</h1>
                         {recruiterRequests.length == 0 && (
                           <p className="text-slate-400">
@@ -492,84 +583,122 @@ const CompanyProfile = () => {
                             }
                           </p>
                         )}
-                        {recruiterRequests &&
-                          recruiterRequests.map((employee) => (
-                            <div
-                              className="p-3 bg-slate-800 border border-slate-700 mt-3 rounded-xl flex justify-between items-center"
-                              key={employee.email}
-                            >
-                              <div className="">
-                                <p>
-                                  {employee.firstName} {employee.lastName}
-                                </p>
-                                <p className="text-slate-400">
-                                  {employee.email}
-                                </p>
-                              </div>
-                              <div className="flex gap-3">
-                                <button
-                                  className="bg-slate-700 border border-slate-600 p-2 rounded-lg flex justify-center items-center gap-2"
-                                  onClick={() =>
-                                    handleApproveRecruiter(employee.email)
-                                  }
-                                >
-                                  <div className="flex items-center justify-center">
-                                    <div>
-                                      <Image
-                                        src={Check}
-                                        alt=""
-                                        width={16}
-                                        height={16}
-                                      ></Image>
-                                    </div>
-                                  </div>
-                                  Accept
-                                </button>
-                                <button
-                                  className="bg-slate-700 border border-slate-600 p-2 rounded-lg flex justify-center items-center gap-2"
-                                  onClick={() =>
-                                    handleDenyRecruiter(employee.email)
-                                  }
-                                >
-                                  <div className="flex items-center justify-center">
-                                    <div>
-                                      <Image
-                                        src={Cancel}
-                                        alt=""
-                                        width={16}
-                                        height={16}
-                                      ></Image>
-                                    </div>
-                                  </div>
-                                  Reject
-                                </button>
-                              </div>
+                        {recruiterRequests.map((employee) => (
+                          <div
+                            className="p-3 bg-slate-800 border border-slate-700 mt-3 rounded-xl flex justify-between items-center"
+                            key={employee.email}
+                          >
+                            <div>
+                              <p>
+                                {employee.firstName} {employee.lastName}
+                              </p>
+                              <p className="text-slate-400">{employee.email}</p>
                             </div>
-                          ))}
+                            <div className="flex gap-3">
+                              <button
+                                className="bg-slate-700 border border-slate-600 p-2 rounded-lg flex justify-center items-center gap-2"
+                                onClick={() =>
+                                  handleApproveRecruiter(employee.email)
+                                }
+                              >
+                                <div className="flex items-center justify-center">
+                                  <div>
+                                    <Image
+                                      src={Check}
+                                      alt=""
+                                      width={16}
+                                      height={16}
+                                    />
+                                  </div>
+                                </div>
+                                Accept
+                              </button>
+                              <button
+                                className="bg-slate-700 border border-slate-600 p-2 rounded-lg flex justify-center items-center gap-2"
+                                onClick={() =>
+                                  handleDenyRecruiter(employee.email)
+                                }
+                              >
+                                <div className="flex items-center justify-center">
+                                  <div>
+                                    <Image
+                                      src={Cancel}
+                                      alt=""
+                                      width={16}
+                                      height={16}
+                                    />
+                                  </div>
+                                </div>
+                                Reject
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 mt-3 flex-1">
+
+                      <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 flex-1">
                         <h1>Employees</h1>
-                        {employees &&
-                          employees.map((employee) => (
-                            <div
-                              className="p-3 bg-slate-800 border border-slate-700 mt-3 rounded-xl flex justify-between items-center"
-                              key={employee.email}
-                            >
-                              <div className="">
-                                <p>
-                                  {employee.firstName} {employee.lastName}
-                                </p>
-                                <p className="text-slate-400">
-                                  {employee.email}
+                        {employees.map((employee) => (
+                          <div
+                            className="p-3 bg-slate-800 border border-slate-700 mt-3 rounded-xl flex justify-between items-center"
+                            key={employee.email}
+                          >
+                            <div>
+                              <p>
+                                {employee.firstName} {employee.lastName}
+                              </p>
+                              <p className="text-slate-400">{employee.email}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* NEW: Job Management Section */}
+                  <div className="mt-6 pt-6 border-t border-slate-800">
+                    <h2>Job Management</h2>
+                    <div className="flex flex-col md:flex-row gap-6 mt-3">
+                      {/* Left: Add Job */}
+                      <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 flex-1">
+                        <div className="flex justify-between items-center">
+                          <h1>Jobs</h1>
+                          <button
+                            className="bg-indigo-600 py-1 px-3 rounded-lg flex items-center gap-2"
+                            onClick={() => setShowAddJobModal(true)}
+                          >
+                            <div className="flex items-center justify-center">
+                              <Image src={Plus} alt="" width={14} height={14} />
+                            </div>
+                            Add Job
+                          </button>
+                        </div>
+
+                        {/* Show list of existing jobs */}
+                        {jobs && jobs.length > 0 ? (
+                          <div className="mt-3">
+                            {jobs.map((job) => (
+                              <div
+                                key={job.id}
+                                className="p-3 bg-slate-800 border border-slate-700 mt-3 rounded-xl flex justify-between items-center"
+                              >
+                                <p>{job.name}</p>
+                                <p className="text-slate-400 text-sm">
+                                  ID: {job.id}
                                 </p>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="mt-3 text-slate-400">No jobs yet.</p>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
               )}
+
+            {/* If user has a company but not approved */}
             {companyDataLoaded &&
               userCompanyName &&
               userCompanyJoinCode &&
@@ -592,6 +721,69 @@ const CompanyProfile = () => {
           </div>
         </div>
       </div>
+
+      {/* ADD JOB MODAL */}
+      <AnimatePresence>
+        {showAddJobModal && (
+          <motion.div
+            className="fixed inset-0 z-50 flex justify-center items-center bg-slate-950 bg-opacity-60 p-6 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <motion.form
+              onSubmit={handleCreateJob}
+              className="bg-slate-900 p-6 rounded-xl border border-slate-800 w-full max-w-md relative"
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.8 }}
+            >
+              {/* Close button */}
+              <button
+                type="button"
+                onClick={() => setShowAddJobModal(false)}
+                className="absolute top-4 right-4 bg-slate-900 border border-slate-800 p-2 rounded-full"
+              >
+                <Image
+                  src={Plus}
+                  width={14}
+                  height={14}
+                  alt="close"
+                  className="rotate-45"
+                />
+              </button>
+
+              <h2 className="text-xl font-semibold mb-4">Create New Job</h2>
+              <label className="text-sm mb-1 block">Job Name:</label>
+              <input
+                type="text"
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm mb-4"
+                value={newJobName}
+                onChange={(e) => setNewJobNameState(e.target.value)}
+              />
+
+              <motion.button
+                type="submit"
+                className="mt-2 bg-indigo-600 py-2 px-4 rounded-lg w-full flex items-center justify-center"
+                whileTap={{ scale: 0.95 }}
+              >
+                Create Job
+                <div className="arrow flex items-center justify-center ml-2">
+                  <div className="arrowMiddle" />
+                  <Image
+                    src={Arrow}
+                    alt=""
+                    width={14}
+                    height={14}
+                    className="arrowSide"
+                  />
+                </div>
+              </motion.button>
+            </motion.form>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };
