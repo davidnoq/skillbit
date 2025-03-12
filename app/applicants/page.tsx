@@ -20,8 +20,8 @@ interface TestIDInterface {
   firstName: string;
   lastName: string;
   email: string;
-  jobId?: string;         // The job the candidate is assigned to
-  status: string;        // "Sent" | "Unsent" | "Submitted" | "Expired"
+  jobId?: string; // The job the candidate is assigned to
+  status: string; // "Sent" | "Unsent" | "Submitted" | "Expired"
   score: string;
   submitted: boolean;
   template?: Question;
@@ -46,7 +46,7 @@ interface Job {
 }
 
 interface AssignableCandidate extends TestIDInterface {
-  selected: boolean;  // used in "Assign Templates" flow
+  selected: boolean; // used in "Assign Templates" flow
 }
 
 const Applicants = () => {
@@ -79,15 +79,20 @@ const Applicants = () => {
   // For “Assign Templates” flow
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedJobForAssign, setSelectedJobForAssign] = useState("");
-  const [selectedTemplateForAssign, setSelectedTemplateForAssign] = useState("");
-  const [assignableCandidates, setAssignableCandidates] = useState<AssignableCandidate[]>([]);
+  const [selectedTemplateForAssign, setSelectedTemplateForAssign] =
+    useState("");
+  const [assignableCandidates, setAssignableCandidates] = useState<
+    AssignableCandidate[]
+  >([]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const applicantsPerPage = 50;
 
   // Track expanded details for each candidate
-  const [expandedCandidateId, setExpandedCandidateId] = useState<string | null>(null);
+  const [expandedCandidateId, setExpandedCandidateId] = useState<string | null>(
+    null
+  );
 
   // Delete Confirmation
   const [confirmDeleteModal, setConfirmDeleteModal] = useState(false);
@@ -290,7 +295,6 @@ const Applicants = () => {
   // -----------------------
   //   Delete multiple
   // -----------------------
- 
 
   const openDeleteModal = () => setConfirmDeleteModal(true);
   const closeDeleteModal = () => setConfirmDeleteModal(false);
@@ -309,7 +313,7 @@ const Applicants = () => {
       });
       const data = await response.json();
       toast.remove();
-  
+
       if (data.message === "Success") {
         toast.success("Candidate deleted.");
         // Reload or re-fetch the applicants so the UI updates
@@ -322,7 +326,7 @@ const Applicants = () => {
       toast.error("Error deleting candidate.");
       console.error("Error deleting candidate:", err);
     }
-  };
+  }
 
   // --------------------------------
   //   The New "Assign Templates" Flow
@@ -423,7 +427,9 @@ const Applicants = () => {
 
   // Toggle "View Details" for a candidate
   const toggleExpand = (candidateId: string) => {
-    setExpandedCandidateId((prev) => (prev === candidateId ? null : candidateId));
+    setExpandedCandidateId((prev) =>
+      prev === candidateId ? null : candidateId
+    );
   };
 
   // --------------------------------
@@ -533,26 +539,28 @@ const Applicants = () => {
                               {app.firstName} {app.lastName}
                             </h2>
                             {/* Color-coded status */}
-                            <p className={`text-xs mt-1 ${getStatusClass(app.status)}`}>
+                            <p
+                              className={`text-xs mt-1 ${getStatusClass(
+                                app.status
+                              )}`}
+                            >
                               Status: {app.status}
                             </p>
                           </div>
                           <div className="flex gap-2">
-  <button
-    onClick={() => handleDeleteCandidate(app.id)}
-    className="text-xs underline hover:text-red-400"
-  >
-    Delete
-  </button>
-  <button
-    onClick={() => toggleExpand(app.id)}
-    className="text-xs underline hover:text-slate-300"
-  >
-    {isExpanded ? "Hide Details" : "View Details"}
-  </button>
-</div>
-
-                          
+                            <button
+                              onClick={() => handleDeleteCandidate(app.id)}
+                              className="text-xs underline hover:text-red-400"
+                            >
+                              Delete
+                            </button>
+                            <button
+                              onClick={() => toggleExpand(app.id)}
+                              className="text-xs underline hover:text-slate-300"
+                            >
+                              {isExpanded ? "Hide Details" : "View Details"}
+                            </button>
+                          </div>
                         </div>
 
                         {/* Expanded details section */}
@@ -570,7 +578,8 @@ const Applicants = () => {
                             <p className="text-slate-400 mb-1">
                               <strong>Job:</strong>{" "}
                               {app.jobId
-                                ? jobs.find((j) => j.id === app.jobId)?.name || app.jobId
+                                ? jobs.find((j) => j.id === app.jobId)?.name ||
+                                  app.jobId
                                 : "No job assigned"}
                             </p>
                             <p className="text-slate-400 mb-1">
@@ -638,7 +647,13 @@ const Applicants = () => {
                 onClick={closeAddApplicantModal}
                 className="absolute top-4 right-4 bg-slate-700 p-1 rounded-full"
               >
-                <Image src={Plus} width={14} height={14} alt="Close" className="rotate-45" />
+                <Image
+                  src={Plus}
+                  width={14}
+                  height={14}
+                  alt="Close"
+                  className="rotate-45"
+                />
               </button>
               <h2 className="text-xl font-semibold">Add Candidate</h2>
 
@@ -649,7 +664,10 @@ const Applicants = () => {
                   className="w-full bg-slate-800 p-2 rounded-lg"
                   value={newApplicantForm.firstName}
                   onChange={(e) =>
-                    setNewApplicantForm((prev) => ({ ...prev, firstName: e.target.value }))
+                    setNewApplicantForm((prev) => ({
+                      ...prev,
+                      firstName: e.target.value,
+                    }))
                   }
                 />
               </div>
@@ -660,7 +678,10 @@ const Applicants = () => {
                   className="w-full bg-slate-800 p-2 rounded-lg"
                   value={newApplicantForm.lastName}
                   onChange={(e) =>
-                    setNewApplicantForm((prev) => ({ ...prev, lastName: e.target.value }))
+                    setNewApplicantForm((prev) => ({
+                      ...prev,
+                      lastName: e.target.value,
+                    }))
                   }
                 />
               </div>
@@ -671,7 +692,10 @@ const Applicants = () => {
                   className="w-full bg-slate-800 p-2 rounded-lg"
                   value={newApplicantForm.email}
                   onChange={(e) =>
-                    setNewApplicantForm((prev) => ({ ...prev, email: e.target.value }))
+                    setNewApplicantForm((prev) => ({
+                      ...prev,
+                      email: e.target.value,
+                    }))
                   }
                 />
               </div>
@@ -682,7 +706,10 @@ const Applicants = () => {
                     className="w-full bg-slate-800 p-2 rounded-lg"
                     value={newApplicantForm.jobId}
                     onChange={(e) =>
-                      setNewApplicantForm((prev) => ({ ...prev, jobId: e.target.value }))
+                      setNewApplicantForm((prev) => ({
+                        ...prev,
+                        jobId: e.target.value,
+                      }))
                     }
                   >
                     <option value="">Select a job...</option>
@@ -693,7 +720,9 @@ const Applicants = () => {
                     ))}
                   </select>
                 ) : (
-                  <p className="text-slate-400">No jobs found. Please create one first.</p>
+                  <p className="text-slate-400">
+                    No jobs found. Please create one first.
+                  </p>
                 )}
               </div>
 
@@ -728,12 +757,19 @@ const Applicants = () => {
                 className="absolute top-4 right-4 bg-slate-700 p-1 rounded-full"
                 onClick={closeAssignModal}
               >
-                <Image src={Plus} width={14} height={14} alt="Close" className="rotate-45" />
+                <Image
+                  src={Plus}
+                  width={14}
+                  height={14}
+                  alt="Close"
+                  className="rotate-45"
+                />
               </button>
 
               <h2 className="text-xl font-semibold mb-2">Assign Templates</h2>
               <p className="text-sm text-slate-400 mb-3">
-                Pick a job, then pick a template, then select which candidates receive it.
+                Pick a job, then pick a template, then select which candidates
+                receive it.
               </p>
 
               {/* Step 1: Pick Job */}
@@ -759,11 +795,16 @@ const Applicants = () => {
               {/* Step 2: Show the candidates that have this job, pick who gets the test */}
               {selectedJobForAssign && (
                 <>
-                  <p className="text-sm text-slate-400">Candidates for this Job:</p>
+                  <p className="text-sm text-slate-400">
+                    Candidates for this Job:
+                  </p>
                   {assignableCandidates.length > 0 ? (
                     <ul className="max-h-40 overflow-y-auto border border-slate-700 rounded-lg p-2 mb-3">
                       {assignableCandidates.map((cand) => (
-                        <li key={cand.id} className="flex items-center gap-2 text-sm mb-1">
+                        <li
+                          key={cand.id}
+                          className="flex items-center gap-2 text-sm mb-1"
+                        >
                           <input
                             type="checkbox"
                             checked={cand.selected}
@@ -785,7 +826,7 @@ const Applicants = () => {
                     </ul>
                   ) : (
                     <p className="text-sm text-slate-500 mb-3">
-                      No candidates found for this job. 
+                      No candidates found for this job.
                     </p>
                   )}
 
@@ -797,7 +838,9 @@ const Applicants = () => {
                     id="pickTemplate"
                     className="bg-slate-800 border border-slate-700 p-2 rounded-lg mb-4"
                     value={selectedTemplateForAssign}
-                    onChange={(e) => setSelectedTemplateForAssign(e.target.value)}
+                    onChange={(e) =>
+                      setSelectedTemplateForAssign(e.target.value)
+                    }
                   >
                     <option value="">-- Select Template --</option>
                     {questions.map((q) => (
@@ -822,7 +865,7 @@ const Applicants = () => {
       </AnimatePresence>
 
       {/* DELETE CONFIRM MODAL */}
-      <AnimatePresence>
+      {/* <AnimatePresence>
         {confirmDeleteModal && (
           <motion.div
             className="fixed inset-0 z-50 bg-slate-950 bg-opacity-60 p-6 backdrop-blur-sm flex justify-center items-center"
@@ -857,7 +900,7 @@ const Applicants = () => {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence> */}
     </>
   );
 };

@@ -52,7 +52,9 @@ const CompanyProfile = () => {
 
   const [accountMenuVisible, setAccountMenuVisible] = useState(false);
   const [userCompanyName, setUserCompanyName] = useState<string | null>(null);
-  const [userCompanyJoinCode, setUserCompanyJoinCode] = useState<string | null>(null);
+  const [userCompanyJoinCode, setUserCompanyJoinCode] = useState<string | null>(
+    null
+  );
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [joinCompany, setJoinCompany] = useState("");
@@ -154,6 +156,7 @@ const CompanyProfile = () => {
         });
         const userData = await userResponse.json();
         // 2) If user has a company, set relevant data
+
         if (
           userData.message.employee &&
           userData.message.employee.company.name &&
@@ -326,7 +329,10 @@ const CompanyProfile = () => {
 
   const inputs = useRef<Array<HTMLInputElement | null>>([]);
 
-  const handleInput = (index: number, event: React.FormEvent<HTMLInputElement>) => {
+  const handleInput = (
+    index: number,
+    event: React.FormEvent<HTMLInputElement>
+  ) => {
     const input = event.currentTarget;
     const maxLength = parseInt(input.getAttribute("maxlength") || "0");
 
@@ -345,7 +351,10 @@ const CompanyProfile = () => {
     }
   };
 
-  const handleKeyDown = (index: number, event: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (
+    index: number,
+    event: React.KeyboardEvent<HTMLInputElement>
+  ) => {
     if (event.key === "Backspace" && index > 0) {
       const input = event.currentTarget;
       if (input.value.length === 0 && inputs.current[index - 1]) {
@@ -420,7 +429,13 @@ const CompanyProfile = () => {
                         }}
                         exit={{ opacity: 0, y: 30 }}
                       >
-                        <Image src={Plus} width={14} height={14} className="rotate-45" alt="Exit" />
+                        <Image
+                          src={Plus}
+                          width={14}
+                          height={14}
+                          className="rotate-45"
+                          alt="Exit"
+                        />
                       </motion.button>
                       <motion.form
                         className="bg-slate-900 p-6 rounded-xl border border-slate-800"
@@ -434,7 +449,10 @@ const CompanyProfile = () => {
                         exit={{ opacity: 0, y: 30 }}
                       >
                         <h1>Add your company</h1>
-                        <p className="mb-6">If your company is not a part of Skillbit, enroll here!</p>
+                        <p className="mb-6">
+                          If your company is not a part of Skillbit, enroll
+                          here!
+                        </p>
                         <motion.p
                           initial={{ opacity: 0, y: 30 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -472,7 +490,13 @@ const CompanyProfile = () => {
                               <div className="arrow flex items-center justify-center">
                                 <div className="arrowMiddle"></div>
                                 <div>
-                                  <Image src={Arrow} alt="" width={14} height={14} className="arrowSide" />
+                                  <Image
+                                    src={Arrow}
+                                    alt=""
+                                    width={14}
+                                    height={14}
+                                    className="arrowSide"
+                                  />
                                 </div>
                               </div>
                             </>
@@ -534,142 +558,166 @@ const CompanyProfile = () => {
             )}
 
             {/* If user has a company & is approved */}
-            {companyDataLoaded && userCompanyName && userCompanyJoinCode && userCompanyId && userApprovalStatus && (
-              <div className="bg-gradient-to-br from-slate-900 to-transparent border border-slate-800 rounded-xl p-6">
-                <h1>{userCompanyName}</h1>
-                <p className="mt-2">
-                  Join code:{" "}
-                  <span className="bg-slate-800 border border-slate-700 py-1 px-2 rounded-xl">
-                    {userCompanyJoinCode}
-                  </span>
-                </p>
-                <div className="mt-6 pt-6 border-t border-slate-800">
-                  <h2>Team Management</h2>
-                  <div className="flex flex-col lg:flex-row gap-6 mt-3">
-                    <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 flex-1">
-                      <h1>Recruiter Requests</h1>
-                      {recruiterRequests.length == 0 && (
-                        <p className="text-slate-400">
-                          {
-                            "Join requests from your company's employees will appear here. You don't have any recruiter requests."
-                          }
-                        </p>
-                      )}
-                      {recruiterRequests.map((employee) => (
-                        <div
-                          className="p-3 bg-slate-800 border border-slate-700 mt-3 rounded-xl flex justify-between items-center"
-                          key={employee.email}
-                        >
-                          <div>
-                            <p>
-                              {employee.firstName} {employee.lastName}
-                            </p>
-                            <p className="text-slate-400">{employee.email}</p>
-                          </div>
-                          <div className="flex gap-3">
-                            <button
-                              className="bg-slate-700 border border-slate-600 p-2 rounded-lg flex justify-center items-center gap-2"
-                              onClick={() => handleApproveRecruiter(employee.email)}
-                            >
-                              <div className="flex items-center justify-center">
-                                <div>
-                                  <Image src={Check} alt="" width={16} height={16} />
+            {companyDataLoaded &&
+              userCompanyName &&
+              userCompanyJoinCode &&
+              userCompanyId &&
+              userApprovalStatus && (
+                <div className="bg-gradient-to-br from-slate-900 to-transparent border border-slate-800 rounded-xl p-6">
+                  <h1>{userCompanyName}</h1>
+                  <p className="mt-2">
+                    Join code:{" "}
+                    <span className="bg-slate-800 border border-slate-700 py-1 px-2 rounded-xl">
+                      {userCompanyJoinCode}
+                    </span>
+                  </p>
+                  <div className="mt-6 pt-6 border-t border-slate-800">
+                    <h2>Team Management</h2>
+                    <div className="flex flex-col lg:flex-row gap-6 mt-3">
+                      <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 flex-1">
+                        <h1>Recruiter Requests</h1>
+                        {recruiterRequests.length == 0 && (
+                          <p className="text-slate-400">
+                            {
+                              "Join requests from your company's employees will appear here. You don't have any recruiter requests."
+                            }
+                          </p>
+                        )}
+                        {recruiterRequests.map((employee) => (
+                          <div
+                            className="p-3 bg-slate-800 border border-slate-700 mt-3 rounded-xl flex justify-between items-center"
+                            key={employee.email}
+                          >
+                            <div>
+                              <p>
+                                {employee.firstName} {employee.lastName}
+                              </p>
+                              <p className="text-slate-400">{employee.email}</p>
+                            </div>
+                            <div className="flex gap-3">
+                              <button
+                                className="bg-slate-700 border border-slate-600 p-2 rounded-lg flex justify-center items-center gap-2"
+                                onClick={() =>
+                                  handleApproveRecruiter(employee.email)
+                                }
+                              >
+                                <div className="flex items-center justify-center">
+                                  <div>
+                                    <Image
+                                      src={Check}
+                                      alt=""
+                                      width={16}
+                                      height={16}
+                                    />
+                                  </div>
                                 </div>
-                              </div>
-                              Accept
-                            </button>
-                            <button
-                              className="bg-slate-700 border border-slate-600 p-2 rounded-lg flex justify-center items-center gap-2"
-                              onClick={() => handleDenyRecruiter(employee.email)}
-                            >
-                              <div className="flex items-center justify-center">
-                                <div>
-                                  <Image src={Cancel} alt="" width={16} height={16} />
+                                Accept
+                              </button>
+                              <button
+                                className="bg-slate-700 border border-slate-600 p-2 rounded-lg flex justify-center items-center gap-2"
+                                onClick={() =>
+                                  handleDenyRecruiter(employee.email)
+                                }
+                              >
+                                <div className="flex items-center justify-center">
+                                  <div>
+                                    <Image
+                                      src={Cancel}
+                                      alt=""
+                                      width={16}
+                                      height={16}
+                                    />
+                                  </div>
                                 </div>
-                              </div>
-                              Reject
-                            </button>
+                                Reject
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 flex-1">
-                      <h1>Employees</h1>
-                      {employees.map((employee) => (
-                        <div
-                          className="p-3 bg-slate-800 border border-slate-700 mt-3 rounded-xl flex justify-between items-center"
-                          key={employee.email}
-                        >
-                          <div>
-                            <p>
-                              {employee.firstName} {employee.lastName}
-                            </p>
-                            <p className="text-slate-400">{employee.email}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* NEW: Job Management Section */}
-                <div className="mt-6 pt-6 border-t border-slate-800">
-                  <h2>Job Management</h2>
-                  <div className="flex flex-col md:flex-row gap-6 mt-3">
-                    {/* Left: Add Job */}
-                    <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 flex-1">
-                      <div className="flex justify-between items-center">
-                        <h1>Jobs</h1>
-                        <button
-                          className="bg-indigo-600 py-1 px-3 rounded-lg flex items-center gap-2"
-                          onClick={() => setShowAddJobModal(true)}
-                        >
-                          <div className="flex items-center justify-center">
-                            <Image src={Plus} alt="" width={14} height={14} />
-                          </div>
-                          Add Job
-                        </button>
+                        ))}
                       </div>
 
-                      {/* Show list of existing jobs */}
-                      {jobs && jobs.length > 0 ? (
-                        <div className="mt-3">
-                          {jobs.map((job) => (
-                            <div
-                              key={job.id}
-                              className="p-3 bg-slate-800 border border-slate-700 mt-3 rounded-xl flex justify-between items-center"
-                            >
-                              <p>{job.name}</p>
-                              <p className="text-slate-400 text-sm">ID: {job.id}</p>
+                      <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 flex-1">
+                        <h1>Employees</h1>
+                        {employees.map((employee) => (
+                          <div
+                            className="p-3 bg-slate-800 border border-slate-700 mt-3 rounded-xl flex justify-between items-center"
+                            key={employee.email}
+                          >
+                            <div>
+                              <p>
+                                {employee.firstName} {employee.lastName}
+                              </p>
+                              <p className="text-slate-400">{employee.email}</p>
                             </div>
-                          ))}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* NEW: Job Management Section */}
+                  <div className="mt-6 pt-6 border-t border-slate-800">
+                    <h2>Job Management</h2>
+                    <div className="flex flex-col md:flex-row gap-6 mt-3">
+                      {/* Left: Add Job */}
+                      <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 flex-1">
+                        <div className="flex justify-between items-center">
+                          <h1>Jobs</h1>
+                          <button
+                            className="bg-indigo-600 py-1 px-3 rounded-lg flex items-center gap-2"
+                            onClick={() => setShowAddJobModal(true)}
+                          >
+                            <div className="flex items-center justify-center">
+                              <Image src={Plus} alt="" width={14} height={14} />
+                            </div>
+                            Add Job
+                          </button>
                         </div>
-                      ) : (
-                        <p className="mt-3 text-slate-400">No jobs yet.</p>
-                      )}
+
+                        {/* Show list of existing jobs */}
+                        {jobs && jobs.length > 0 ? (
+                          <div className="mt-3">
+                            {jobs.map((job) => (
+                              <div
+                                key={job.id}
+                                className="p-3 bg-slate-800 border border-slate-700 mt-3 rounded-xl flex justify-between items-center"
+                              >
+                                <p>{job.name}</p>
+                                <p className="text-slate-400 text-sm">
+                                  ID: {job.id}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="mt-3 text-slate-400">No jobs yet.</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* If user has a company but not approved */}
-            {companyDataLoaded && userCompanyName && userCompanyJoinCode && userCompanyId && !userApprovalStatus && (
-              <div className="flex justify-center items-center flex-col text-center">
-                <div className="bg-gradient-to-b from-indigo-600 to-transparent w-full rounded-xl p-6 py-20 mb-20"></div>
-                <h1>Your request is under review.</h1>
-                <p>
-                  {`Your recruiter request is currently under review by ${userCompanyName}. Once you are approved, you will have access to your company's profile.`}
-                </p>
-                <button
-                  className="bg-slate-900 border border-slate-800 py-2 px-4 rounded-lg flex justify-center items-center gap-2 mt-3"
-                  onClick={() => handleLeaveCompany(userCompanyId)}
-                >
-                  Withdraw request
-                </button>
-              </div>
-            )}
+            {companyDataLoaded &&
+              userCompanyName &&
+              userCompanyJoinCode &&
+              userCompanyId &&
+              !userApprovalStatus && (
+                <div className="flex justify-center items-center flex-col text-center">
+                  <div className="bg-gradient-to-b from-indigo-600 to-transparent w-full rounded-xl p-6 py-20 mb-20"></div>
+                  <h1>Your request is under review.</h1>
+                  <p>
+                    {`Your recruiter request is currently under review by ${userCompanyName}. Once you are approved, you will have access to your company's profile.`}
+                  </p>
+                  <button
+                    className="bg-slate-900 border border-slate-800 py-2 px-4 rounded-lg flex justify-center items-center gap-2 mt-3"
+                    onClick={() => handleLeaveCompany(userCompanyId)}
+                  >
+                    Withdraw request
+                  </button>
+                </div>
+              )}
           </div>
         </div>
       </div>
@@ -697,7 +745,13 @@ const CompanyProfile = () => {
                 onClick={() => setShowAddJobModal(false)}
                 className="absolute top-4 right-4 bg-slate-900 border border-slate-800 p-2 rounded-full"
               >
-                <Image src={Plus} width={14} height={14} alt="close" className="rotate-45" />
+                <Image
+                  src={Plus}
+                  width={14}
+                  height={14}
+                  alt="close"
+                  className="rotate-45"
+                />
               </button>
 
               <h2 className="text-xl font-semibold mb-4">Create New Job</h2>
@@ -717,7 +771,13 @@ const CompanyProfile = () => {
                 Create Job
                 <div className="arrow flex items-center justify-center ml-2">
                   <div className="arrowMiddle" />
-                  <Image src={Arrow} alt="" width={14} height={14} className="arrowSide" />
+                  <Image
+                    src={Arrow}
+                    alt=""
+                    width={14}
+                    height={14}
+                    className="arrowSide"
+                  />
                 </div>
               </motion.button>
             </motion.form>

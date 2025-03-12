@@ -126,7 +126,7 @@ const Dashboard = () => {
       });
       const data = await response.json();
       console.log(data);
-      setApplicantData(data.message);
+      setApplicantData(data.message || []);
 
       let sentApplicants = 0;
       let unsentApplicants = 0;

@@ -221,7 +221,7 @@ export async function updateQuestion(
   id: string,
   title: string,
   prompt: string,
-  candidatePrompt: string,
+  candidatePrompt: string
 ) {
   try {
     const questions = await prisma.question.update({
@@ -956,8 +956,12 @@ export async function createJobRecord(companyId: string, name: string) {
   try {
     const newJob = await prisma.job.create({
       data: {
-        name,
-        companyId,
+        name: name,
+        company: {
+          connect: {
+            id: companyId,
+          },
+        },
       },
     });
     return newJob;
@@ -975,8 +979,11 @@ export async function createJobRecord(companyId: string, name: string) {
 export async function getCompanyJobsForCompany(companyId: string) {
   try {
     const jobs = await prisma.job.findMany({
-      where: { companyId },
-      orderBy: { createdAt: "desc" },
+      where: {
+        company: {
+          id: companyId,
+        },
+      },
     });
     return jobs;
   } catch (error) {
