@@ -12,6 +12,7 @@ import Arrow from "../../public/assets/icons/arrow.svg";
 import Plus from "../../public/assets/icons/plus.svg";
 import Sidebar from "@/components/sidebar/sidebar";
 import { Toaster, toast } from "react-hot-toast";
+import Dropdown from "../../public/assets/icons/dropdown.svg";
 
 interface TestIDInterface {
   companyID: string;
@@ -154,7 +155,11 @@ const Applicants = () => {
       const res = await fetch("/api/database", {
         method: "POST",
         headers: { "Content-type": "application/json" },
-        body: JSON.stringify({ action: "getApplicants", company: companyId, isSample: false }),
+        body: JSON.stringify({
+          action: "getApplicants",
+          company: companyId,
+          isSample: false,
+        }),
       });
       const data = await res.json();
 
@@ -523,15 +528,15 @@ const Applicants = () => {
             <div className="flex gap-3 mt-2 sm:mt-0">
               <button
                 className="bg-slate-900 border border-slate-800 px-3 py-2 rounded-lg hover:bg-slate-800 text-sm"
-                onClick={openAddApplicantModal}
-              >
-                Add Candidate
-              </button>
-              <button
-                className="bg-slate-900 border border-slate-800 px-3 py-2 rounded-lg hover:bg-slate-800 text-sm"
                 onClick={openAssignModal}
               >
                 Assign Templates
+              </button>
+              <button
+                className="bg-slate-900 border border-slate-800 px-3 py-2 rounded-lg hover:bg-slate-800 text-sm"
+                onClick={openAddApplicantModal}
+              >
+                Add Candidate
               </button>
               <label
                 htmlFor="csvInput"
@@ -562,35 +567,86 @@ const Applicants = () => {
                     return (
                       <li
                         key={app.id}
-                        className="bg-slate-800 border border-slate-700 rounded-lg p-3"
+                        className="bg-slate-800 border border-slate-700 rounded-lg p-3 cursor-pointer"
+                        onClick={() => toggleExpand(app.id)}
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <h2 className="font-semibold text-sm">
+                            <h2 className="font-semibold">
                               {app.firstName} {app.lastName}
                             </h2>
-                            {/* Color-coded status */}
-                            <p
-                              className={`text-xs mt-1 ${getStatusClass(
-                                app.status
-                              )}`}
-                            >
-                              Status: {app.status}
-                            </p>
+                            <div className="flex gap-2 mt-2">
+                              <div className="flex gap-2 items-center justify-center bg-slate-700 px-3 py-1 rounded-full border border-slate-600 w-fit text-xs">
+                                {app.status == "Sent" && (
+                                  <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+                                )}
+                                {app.status == "Not Sent" && (
+                                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                                )}
+                                {app.status == "Expired" && (
+                                  <div className="w-2 h-2 rounded-full bg-gray-500"></div>
+                                )}
+                                {app.status != "Sent" &&
+                                  app.status != "Not Sent" &&
+                                  app.status != "Expired" && (
+                                    <div className="w-2 h-2 rounded-full bg-green-600"></div>
+                                  )}
+                                {app.status}
+                              </div>
+                              {app.status == "Submitted" && (
+                                <motion.button
+                                  className="flex items-center justify-center bg-slate-700 px-3 py-1 rounded-full border border-slate-600 w-fit text-xs"
+                                  onClick={() =>
+                                    window.open(
+                                      `/submissions/${app.id}`,
+                                      "_blank",
+                                      "width=1500,height=800,scrollbars=no,resizable=no"
+                                    )
+                                  }
+                                >
+                                  <>
+                                    View Submission
+                                    <div className="scale-75">
+                                      <div className="arrow flex items-center justify-center">
+                                        <div className="arrowMiddle" />
+                                        <Image
+                                          src={Arrow}
+                                          alt=""
+                                          width={14}
+                                          height={14}
+                                          className="arrowSide"
+                                        />
+                                      </div>
+                                    </div>
+                                  </>
+                                </motion.button>
+                              )}
+                            </div>
                           </div>
                           <div className="flex gap-2">
-                            <button
+                            {/* <button
                               onClick={() => handleDeleteCandidate(app.id)}
                               className="text-xs underline hover:text-red-400"
                             >
                               Delete
-                            </button>
-                            <button
+                            </button> */}
+                            <Image
+                              src={Dropdown}
+                              alt="Dropdown menu arrow"
+                              width={15}
+                              height={15}
+                              className={
+                                isExpanded
+                                  ? "rotate-0 opacity-25 duration-100"
+                                  : "-rotate-90 opacity-25 duration-100"
+                              }
+                            ></Image>
+                            {/* <button
                               onClick={() => toggleExpand(app.id)}
                               className="text-xs underline hover:text-slate-300"
                             >
                               {isExpanded ? "Hide Details" : "View Details"}
-                            </button>
+                            </button> */}
                           </div>
                         </div>
 
