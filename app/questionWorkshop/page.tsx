@@ -118,11 +118,12 @@ const QuestionWorkshop = () => {
         setNewTitle(data.message[0].title || "");
         setNewPrompt(data.message[0].prompt || "");
       }
+      return data.message.reverse();
     } catch (error) {
       console.error("Error finding questions: ", error);
       return null;
     }
-  }
+  };
 
   // ------------------------------
   //   2) Fetch Jobs from DB
@@ -180,7 +181,9 @@ const QuestionWorkshop = () => {
       newTitle !== currentQuestion.title
     ) {
       toast.remove();
-      toast.error("Title already exists. Please choose a unique template title.");
+      toast.error(
+        "Title already exists. Please choose a unique template title."
+      );
     } else if (newTitle === "") {
       toast.remove();
       toast.error("Please enter a title.");
@@ -272,7 +275,7 @@ const QuestionWorkshop = () => {
 
           // Ensure findQuestions completes before handleAssignTemplate
           const current = await findQuestions(userCompanyId || "");
-          await handleAssignTemplate(current, testIDs);
+          await handleAssignTemplate(current[current.length - 1], testIDs);
 
           // Fetch files only after all above operations are completed
           fetchFilesFromS3(testIDs);
@@ -390,6 +393,7 @@ const QuestionWorkshop = () => {
     try {
       console.log("trying applicant data:");
       console.log(testIDs);
+      console.log("CURRENT:", current);
       toast.loading("Loading...");
       const response = await fetch("/api/database", {
         method: "POST",
@@ -494,7 +498,9 @@ const QuestionWorkshop = () => {
               <div className="flex items-end gap-3">
                 <Image src={QuestionIcon} width={32} height={32} alt="Icon" />
                 <div>
-                  <h2 className="text-lg font-semibold text-white">Assessment Builder</h2>
+                  <h2 className="text-lg font-semibold text-white">
+                    Assessment Builder
+                  </h2>
                   <p className="text-sm text-slate-400">
                     Build customized question templates for your candidates!
                   </p>
@@ -641,7 +647,12 @@ const QuestionWorkshop = () => {
                               value={newTitle}
                               placeholder="Question Title"
                             />
-                            <Image src={Edit} alt="Edit title" width={14} height={14} />
+                            <Image
+                              src={Edit}
+                              alt="Edit title"
+                              width={14}
+                              height={14}
+                            />
                           </div>
                           {/* Language & Type */}
                           <div className="flex flex-wrap gap-3 mt-3">
@@ -660,7 +671,9 @@ const QuestionWorkshop = () => {
 
                           {/* Prompt */}
                           <div className="mt-3">
-                            <h2 className="text-lg font-semibold">Template Prompt</h2>
+                            <h2 className="text-lg font-semibold">
+                              Template Prompt
+                            </h2>
                             <p className="text-sm text-slate-400">
                               This open-ended prompt is used to generate your
                               template. Candidates will not see this.
@@ -675,7 +688,9 @@ const QuestionWorkshop = () => {
 
                           {/* Expiration */}
                           <div className="mt-3 flex items-center gap-2">
-                            <h2 className="text-lg font-semibold">Expiration:</h2>
+                            <h2 className="text-lg font-semibold">
+                              Expiration:
+                            </h2>
                             <span className="bg-slate-800 border border-slate-700 py-1 px-2 rounded-xl">
                               {currentQuestion.expiration}
                             </span>
@@ -907,7 +922,8 @@ const QuestionWorkshop = () => {
                 Welcome to the Assessment Builder!
               </h1>
               <p className="text-slate-400 mb-4">
-                To get started, please join a company in the Company Profile tab.
+                To get started, please join a company in the Company Profile
+                tab.
               </p>
               <motion.button
                 className="bg-indigo-600 px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors duration-200 mt-3"
@@ -1019,7 +1035,8 @@ const QuestionWorkshop = () => {
                       <div className="flex flex-wrap gap-3 mt-3">
                         <div
                           className={`rounded-xl border ${
-                            language === "JavaScript" && framework === "React JS"
+                            language === "JavaScript" &&
+                            framework === "React JS"
                               ? "bg-indigo-600 border-indigo-600"
                               : "bg-slate-800 border-slate-700 hover:bg-slate-700"
                           } p-3 cursor-pointer transition-colors duration-100`}
@@ -1032,7 +1049,8 @@ const QuestionWorkshop = () => {
                         </div>
                         <div
                           className={`rounded-xl border ${
-                            language === "TypeScript" && framework === "React JS"
+                            language === "TypeScript" &&
+                            framework === "React JS"
                               ? "bg-indigo-600 border-indigo-600"
                               : "bg-slate-800 border-slate-700 hover:bg-slate-700"
                           } p-3 cursor-pointer transition-colors duration-100`}
@@ -1190,7 +1208,9 @@ const QuestionWorkshop = () => {
                           transition={{ duration: 0.3 }}
                         >
                           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                            <p className="whitespace-nowrap">Test expires in:</p>
+                            <p className="whitespace-nowrap">
+                              Test expires in:
+                            </p>
                             <select
                               id="expiration"
                               value={expiration}
@@ -1234,7 +1254,8 @@ const QuestionWorkshop = () => {
                         </select>
                       ) : (
                         <p className="text-red-400 mt-3">
-                          No jobs found. Please create a job in Company Profile first.
+                          No jobs found. Please create a job in Company Profile
+                          first.
                         </p>
                       )}
                     </div>

@@ -123,7 +123,7 @@ export async function POST(req: Request) {
       //creating instructions
       const instructions = await generateInstructionsFromPrompt(
         model,
-        `Here are the files for a technical problem that job applicants will solve. Here is the prompt that generated these files: ${instructionsPrompt}. Now, create the instructions that the job applicants will see to solve the problem. For example, it could follow the form \'Your goal is to...\'`
+        `AI has generated files for a technical problem that job applicants will solve. Here is the prompt that generated said files: ${instructionsPrompt}. Now, create the instructions that the job applicants will see to solve the problem. For example, it could follow the form \'Your goal is to...\'`
       );
 
       //adding instructions to the db
