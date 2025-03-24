@@ -12,6 +12,7 @@ import Image from "next/image";
 import { useSession } from "next-auth/react";
 import Loader from "@/components/loader/loader";
 import { Toaster, toast } from "react-hot-toast";
+import Sidebar from "@/components/sidebar/sidebar";
 
 interface TestIDInterface {
   companyID: string;
@@ -139,98 +140,105 @@ export default function Submissions({ params }: { params: { id: string } }) {
   };
 
   return (
-    <div className="p-6 bg-slate-950 flex gap-6">
-      <div className="flex-[1.5] relative rounded-lg border border-slate-800 overflow-hidden">
-        <CodeRunner id={params.id}></CodeRunner>
-      </div>
-      <div className="flex-[0.5]">
-        <h1>Grading Insights</h1>
-        {candidate && (
-          <div className="mt-2 flex items-center gap-2">
-            <div className="flex gap-2 items-center justify-center bg-slate-900 px-3 py-1 rounded-full border border-slate-800 w-fit text-xs">
-              {candidate.status == "Sent" && (
-                <div className="w-2 h-2 rounded-full bg-blue-600"></div>
-              )}
-              {candidate.status == "Not Sent" && (
-                <div className="w-2 h-2 rounded-full bg-red-500"></div>
-              )}
-              {candidate.status == "Expired" && (
-                <div className="w-2 h-2 rounded-full bg-gray-500"></div>
-              )}
-              {candidate.status != "Sent" &&
-                candidate.status != "Not Sent" &&
-                candidate.status != "Expired" && (
-                  <div className="w-2 h-2 rounded-full bg-green-600"></div>
-                )}
-              {candidate.status}
-            </div>
-            <div
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="cursor-pointer relative flex gap-2 items-center justify-center bg-slate-900 px-3 py-1 rounded-full border border-slate-800 w-fit text-xs"
-            >
-              View Candidate Details
-              <Image
-                src={Dropdown}
-                alt="Dropdown menu arrow"
-                width={15}
-                height={15}
-                className={
-                  isExpanded
-                    ? "rotate-0 opacity-25 duration-100"
-                    : "-rotate-90 opacity-25 duration-100"
-                }
-              ></Image>
-              {isExpanded && (
-                <div className="absolute bg-slate-900 border border-slate-800 p-6 top-10 rounded-lg right-0">
-                  <p className="text-slate-400 mb-1 flex gap-2 items-center">
-                    <p>Test ID:</p>
-                    <p className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white">
-                      {candidate.id}
-                    </p>
-                  </p>
-                  <p className="text-slate-400 mb-1 flex gap-2 items-center">
-                    <p>Email:</p>
-                    <p className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white">
-                      {candidate.email}
-                    </p>
-                  </p>
-                  <p className="text-slate-400 mb-1 flex gap-2 items-center">
-                    <p>Job:</p>
-                    <p className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white">
-                      {candidate.jobId
-                        ? jobs.find((j) => j.id === candidate.jobId)?.name ||
-                          candidate.jobId
-                        : "No job assigned"}
-                    </p>
-                  </p>
-                  <p className="text-slate-400 mb-1 flex gap-2 items-center">
-                    <p>Created:</p>
-                    <p className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white">
-                      {new Date(candidate.created).toLocaleString()}
-                    </p>
-                  </p>
-                  {candidate.template && (
-                    <p className="text-slate-400 mb-1 flex gap-2 items-center">
-                      <p>Template:</p>
-                      <p className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white">
-                        {candidate.template.title}
-                      </p>
-                    </p>
+    <>
+      <div className="max-w-screen text-white flex overflow-x-hidden">
+        {/* <Sidebar></Sidebar> */}
+        <div className="p-6 bg-slate-950 flex gap-6 flex-1">
+          <div className="flex-[1.5] relative rounded-lg border border-slate-800 overflow-hidden">
+            <CodeRunner id={params.id}></CodeRunner>
+          </div>
+          <div className="flex-[0.5]">
+            <h1>Grading Insights</h1>
+            {candidate && (
+              <div className="mt-2 flex items-center gap-2">
+                <div className="flex gap-2 items-center justify-center bg-slate-900 px-3 py-1 rounded-full border border-slate-800 w-fit text-xs">
+                  {candidate.status == "Sent" && (
+                    <div className="w-2 h-2 rounded-full bg-blue-600"></div>
                   )}
-                  {candidate.expirationDate && (
-                    <p className="text-slate-400 mb-1 flex gap-2 items-center">
-                      <p>Expiration:</p>{" "}
-                      <p className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white">
-                        {new Date(candidate.expirationDate).toLocaleString()}
+                  {candidate.status == "Not Sent" && (
+                    <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                  )}
+                  {candidate.status == "Expired" && (
+                    <div className="w-2 h-2 rounded-full bg-gray-500"></div>
+                  )}
+                  {candidate.status != "Sent" &&
+                    candidate.status != "Not Sent" &&
+                    candidate.status != "Expired" && (
+                      <div className="w-2 h-2 rounded-full bg-green-600"></div>
+                    )}
+                  {candidate.status}
+                </div>
+                <div
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="cursor-pointer relative flex gap-2 items-center justify-center bg-slate-900 px-3 py-1 rounded-full border border-slate-800 w-fit text-xs"
+                >
+                  View Candidate Details
+                  <Image
+                    src={Dropdown}
+                    alt="Dropdown menu arrow"
+                    width={15}
+                    height={15}
+                    className={
+                      isExpanded
+                        ? "rotate-0 opacity-25 duration-100"
+                        : "-rotate-90 opacity-25 duration-100"
+                    }
+                  ></Image>
+                  {isExpanded && (
+                    <div className="absolute bg-slate-900 border border-slate-800 p-6 top-10 rounded-lg right-0">
+                      <p className="text-slate-400 mb-1 flex gap-2 items-center">
+                        <p>Test ID:</p>
+                        <p className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white">
+                          {candidate.id}
+                        </p>
                       </p>
-                    </p>
+                      <p className="text-slate-400 mb-1 flex gap-2 items-center">
+                        <p>Email:</p>
+                        <p className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white">
+                          {candidate.email}
+                        </p>
+                      </p>
+                      <p className="text-slate-400 mb-1 flex gap-2 items-center">
+                        <p>Job:</p>
+                        <p className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white">
+                          {candidate.jobId
+                            ? jobs.find((j) => j.id === candidate.jobId)
+                                ?.name || candidate.jobId
+                            : "No job assigned"}
+                        </p>
+                      </p>
+                      <p className="text-slate-400 mb-1 flex gap-2 items-center">
+                        <p>Created:</p>
+                        <p className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white">
+                          {new Date(candidate.created).toLocaleString()}
+                        </p>
+                      </p>
+                      {candidate.template && (
+                        <p className="text-slate-400 mb-1 flex gap-2 items-center">
+                          <p>Template:</p>
+                          <p className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white">
+                            {candidate.template.title}
+                          </p>
+                        </p>
+                      )}
+                      {candidate.expirationDate && (
+                        <p className="text-slate-400 mb-1 flex gap-2 items-center">
+                          <p>Expiration:</p>{" "}
+                          <p className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white">
+                            {new Date(
+                              candidate.expirationDate
+                            ).toLocaleString()}
+                          </p>
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
