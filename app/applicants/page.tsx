@@ -583,6 +583,18 @@ const Applicants = () => {
                                   )}
                                 {app.status}
                               </div>
+                              <div
+                                onClick={() => handleDeleteCandidate(app.id)}
+                                className="flex gap-2 items-center justify-center bg-slate-700 px-3 py-1 rounded-full border border-slate-600 w-fit text-xs hover:border-red-500 duration-100"
+                              >
+                                <Image
+                                  src={Garbage}
+                                  alt=""
+                                  width={12}
+                                  height={12}
+                                />
+                                Delete
+                              </div>
                               {app.status == "Submitted" && (
                                 <motion.button
                                   className="flex items-center justify-center bg-slate-700 px-3 py-1 rounded-full border border-slate-600 w-fit text-xs"
@@ -611,18 +623,6 @@ const Applicants = () => {
                                   </>
                                 </motion.button>
                               )}
-                              <div
-                                onClick={() => handleDeleteCandidate(app.id)}
-                                className="flex gap-2 items-center justify-center bg-slate-700 px-3 py-1 rounded-full border border-slate-600 w-fit text-xs hover:border-red-500 duration-100"
-                              >
-                                <Image
-                                  src={Garbage}
-                                  alt=""
-                                  width={12}
-                                  height={12}
-                                />
-                                Delete
-                              </div>
                             </div>
                           </div>
                           <div className="flex gap-2">
