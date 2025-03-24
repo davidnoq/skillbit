@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import CodeRunner from "./codeRunner";
+import CodeRunner from "./CodeRunner";
 import Dropdown from "../../../public/assets/icons/dropdown.svg";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
