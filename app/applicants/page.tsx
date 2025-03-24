@@ -13,6 +13,8 @@ import Plus from "../../public/assets/icons/plus.svg";
 import Sidebar from "@/components/sidebar/sidebar";
 import { Toaster, toast } from "react-hot-toast";
 import Dropdown from "../../public/assets/icons/dropdown.svg";
+import Garbage from "../../public/assets/icons/garbage.svg";
+import Assign from "../../public/assets/icons/assign.svg";
 
 interface TestIDInterface {
   companyID: string;
@@ -527,31 +529,19 @@ const Applicants = () => {
             </div>
             <div className="flex gap-3 mt-2 sm:mt-0">
               <button
-                className="bg-slate-900 border border-slate-800 px-3 py-2 rounded-lg hover:bg-slate-800 text-sm"
+                className="bg-slate-900 border border-slate-800 px-3 py-2 rounded-lg hover:bg-slate-800 text-sm flex gap-2 items-center justify-center"
                 onClick={openAssignModal}
               >
+                <Image src={Assign} alt="" width={16} height={16} />
                 Assign Templates
               </button>
               <button
-                className="bg-slate-900 border border-slate-800 px-3 py-2 rounded-lg hover:bg-slate-800 text-sm"
+                className="bg-slate-900 border border-slate-800 px-3 py-2 rounded-lg hover:bg-slate-800 text-sm flex gap-2 items-center justify-center"
                 onClick={openAddApplicantModal}
               >
-                Add Candidate
+                <Image src={Plus} alt="" width={12} height={12} />
+                Add Candidates
               </button>
-              <label
-                htmlFor="csvInput"
-                className="bg-slate-900 border border-slate-800 px-3 py-2 rounded-lg hover:bg-slate-800 text-sm cursor-pointer"
-              >
-                Import CSV
-              </label>
-              <input
-                id="csvInput"
-                type="file"
-                accept=".csv"
-                onChange={handleCsvImport}
-                key={fileInputKey}
-                style={{ display: "none" }}
-              />
             </div>
           </div>
 
@@ -621,6 +611,18 @@ const Applicants = () => {
                                   </>
                                 </motion.button>
                               )}
+                              <div
+                                onClick={() => handleDeleteCandidate(app.id)}
+                                className="flex gap-2 items-center justify-center bg-slate-700 px-3 py-1 rounded-full border border-slate-600 w-fit text-xs hover:border-red-500 duration-100"
+                              >
+                                <Image
+                                  src={Garbage}
+                                  alt=""
+                                  width={12}
+                                  height={12}
+                                />
+                                Delete
+                              </div>
                             </div>
                           </div>
                           <div className="flex gap-2">
@@ -658,30 +660,51 @@ const Applicants = () => {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
                             transition={{ duration: 0.2 }}
+                            onClick={() => toggleExpand(app.id)}
                           >
-                            <p className="text-slate-400 mb-1">
-                              <strong>Email:</strong> {app.email}
+                            <p className="text-slate-400 mb-1 flex gap-2 items-center">
+                              <p>Test ID:</p>
+                              <p className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white">
+                                {app.id}
+                              </p>
                             </p>
-                            <p className="text-slate-400 mb-1">
-                              <strong>Job:</strong>{" "}
-                              {app.jobId
-                                ? jobs.find((j) => j.id === app.jobId)?.name ||
-                                  app.jobId
-                                : "No job assigned"}
+                            <p className="text-slate-400 mb-1 flex gap-2 items-center">
+                              <p>Email:</p>
+                              <p className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white">
+                                {app.email}
+                              </p>
                             </p>
-                            <p className="text-slate-400 mb-1">
-                              <strong>Created:</strong>{" "}
-                              {new Date(app.created).toLocaleString()}
+                            <p className="text-slate-400 mb-1 flex gap-2 items-center">
+                              <p>Job:</p>
+                              <p className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white">
+                                {app.jobId
+                                  ? jobs.find((j) => j.id === app.jobId)
+                                      ?.name || app.jobId
+                                  : "No job assigned"}
+                              </p>
+                            </p>
+                            <p className="text-slate-400 mb-1 flex gap-2 items-center">
+                              <p>Created:</p>
+                              <p className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white">
+                                {new Date(app.created).toLocaleString()}
+                              </p>
                             </p>
                             {app.template && (
-                              <p className="text-slate-400 mb-1">
-                                <strong>Template:</strong> {app.template.title}
+                              <p className="text-slate-400 mb-1 flex gap-2 items-center">
+                                <p>Template:</p>
+                                <p className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white">
+                                  {app.template.title}
+                                </p>
                               </p>
                             )}
                             {app.expirationDate && (
-                              <p className="text-slate-400 mb-1">
-                                <strong>Expiration:</strong>{" "}
-                                {new Date(app.expirationDate).toLocaleString()}
+                              <p className="text-slate-400 mb-1 flex gap-2 items-center">
+                                <p>Expiration:</p>{" "}
+                                <p className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white">
+                                  {new Date(
+                                    app.expirationDate
+                                  ).toLocaleString()}
+                                </p>
                               </p>
                             )}
                           </motion.div>
@@ -717,7 +740,7 @@ const Applicants = () => {
       <AnimatePresence>
         {isAddApplicantModalOpen && (
           <motion.div
-            className="fixed inset-0 z-50 bg-slate-950 bg-opacity-60 p-6 backdrop-blur-sm flex justify-center items-center"
+            className="fixed inset-0 z-50 bg-slate-950 bg-opacity-60 p-6 backdrop-blur-sm flex justify-center items-center flex-col gap-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -732,7 +755,7 @@ const Applicants = () => {
               <button
                 type="button"
                 onClick={closeAddApplicantModal}
-                className="absolute top-4 right-4 bg-slate-700 p-1 rounded-full"
+                className="absolute top-4 right-4 bg-slate-800 p-2 rounded-lg border border-slate-700"
               >
                 <Image
                   src={Plus}
@@ -821,6 +844,27 @@ const Applicants = () => {
                 Add
               </motion.button>
             </motion.form>
+            <div className="text-slate-500 flex gap-2 justify-center items-center">
+              <hr className="w-6 bg-slate-500 h-[1px] border-none rounded-full" />
+              <p>or</p>
+              <hr className="w-6 bg-slate-500 h-[1px] border-none rounded-full" />
+            </div>
+            <div className="">
+              <label
+                htmlFor="csvInput"
+                className="bg-slate-900 border border-slate-800 px-3 py-2 rounded-lg hover:bg-slate-800 text-sm cursor-pointer"
+              >
+                Import CSV
+              </label>
+              <input
+                id="csvInput"
+                type="file"
+                accept=".csv"
+                onChange={handleCsvImport}
+                key={fileInputKey}
+                style={{ display: "none" }}
+              />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -841,7 +885,7 @@ const Applicants = () => {
               exit={{ scale: 0.8 }}
             >
               <button
-                className="absolute top-4 right-4 bg-slate-700 p-1 rounded-full"
+                className="absolute top-4 right-4 bg-slate-800 p-2 rounded-lg border border-slate-700"
                 onClick={closeAssignModal}
               >
                 <Image
