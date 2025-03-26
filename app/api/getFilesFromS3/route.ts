@@ -219,7 +219,7 @@ Second, format the prompt to be clear and structured with:
 - Expected deliverables
 
 DO NOT include any code examples or implementation in your response, just format the prompt itself.
-
+For python, it should always be one file with no tests files. If you are supposed to input bugs, make sure to not include them in the output at all.
 Here's the original prompt:
 ${originalPrompt}
 
@@ -236,21 +236,30 @@ Please respond with:
     console.log("Verification response:", response);
 
     // Extract the formatted prompt section from the response
-    // This is a simple extraction - adjust the regex pattern if needed
-    const formattedPromptMatch = response.match(
-      /formatted prompt that should be used for code generation:?([\s\S]+)/i
-    );
-
     let formattedPrompt = originalPrompt;
-    if (formattedPromptMatch && formattedPromptMatch[1]) {
-      // Use the formatted prompt
-      formattedPrompt = formattedPromptMatch[1].trim();
-      console.log("Formatted prompt:", formattedPrompt);
-    } else {
-      // If we can't extract the formatted prompt, fall back to the original
-      console.warn(
-        "Could not extract formatted prompt from Gemini response. Using original prompt."
-      );
+
+    // Try different regex patterns to find the formatted prompt
+    const formatPatterns = [
+      /formatted prompt that should be used for code generation:?([\s\S]+)/i,
+      /2\.\s*((?:(?!^[0-9]+\.).)+)/im, // Numbered list item 2
+      /formatted prompt:([\s\S]+)/i,
+    ];
+
+    for (const pattern of formatPatterns) {
+      const match = response.match(pattern);
+      if (match && match[1] && match[1].trim().length > 0) {
+        formattedPrompt = match[1].trim();
+        console.log("Found formatted prompt using pattern:", pattern);
+        console.log("Formatted prompt:", formattedPrompt);
+        break;
+      }
+    }
+
+    if (formattedPrompt === originalPrompt) {
+      // If no patterns matched, take the whole response as the formatted prompt
+      // as it might still be better than the original
+      formattedPrompt = response.trim();
+      console.log("Using entire response as formatted prompt");
     }
 
     // Now call Gemini again with clearer schema instructions
