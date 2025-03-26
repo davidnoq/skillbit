@@ -69,7 +69,7 @@ export async function POST(req: Request) {
       }
 
       //Generate files for S3 bucket
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
       const files = await generateFilesFromPrompt(model, prompt);
 
       if (!Array.isArray(files) || files.length === 0) {
