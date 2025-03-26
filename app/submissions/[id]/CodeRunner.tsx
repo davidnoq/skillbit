@@ -143,13 +143,67 @@ export default function CodeRunner(params: Props) {
         };
       }
 
+      let instructions = "";
+
+      try {
+        const response = await fetch("/api/database", {
+          method: "POST",
+          headers: {
+            "Content-type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "getInstructions",
+            id: params.id,
+          }),
+        });
+        const data = await response.json();
+        console.log(data);
+        instructions = data.message.instructions;
+        if (!response.ok) {
+          throw new Error("Failed to load instructions from db");
+        }
+      } catch (error) {
+        console.error("Error fetching instructions:", error);
+        toast.error("Failed to load instructions from db");
+      }
+
       setIsPythonProject(hasPythonFiles);
       setFilesState(formattedFiles);
       setFileName(firstFilename);
       setShowBrowser(!hasPythonFiles); // Hide browser for Python projects
+
+      await fetchGradingInsights(files, instructions);
     } catch (error) {
       console.error("Error fetching files from S3:", error);
       toast.error("Failed to load files from S3!");
+    }
+  };
+
+  const fetchGradingInsights = async (files: any, instructions: string) => {
+    try {
+      const response = await fetch("/api/gradingInsights", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          files: files,
+          instructions: instructions,
+          testId: params.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch grading insights");
+      }
+
+      const data = await response.json();
+      console.log("success getting grading insights:", data);
+      localStorage.setItem("gradingInsights", JSON.stringify({ data }));
+      window.dispatchEvent(new Event("storage"));
+    } catch (error) {
+      console.error("Error fetching grading insights:", error);
+      toast.error("Failed to fetch grading insights");
     }
   };
 
@@ -319,70 +373,6 @@ export default function CodeRunner(params: Props) {
     }
   };
 
-  // Handle editor changes
-  const handleEditorChange = async (value, event) => {
-    if (!webcontainerInstance || !fileName) return;
-
-    try {
-      // Save file in the appropriate location
-      const filePath = isPythonProject
-        ? fileName
-        : `my-react-app/src/${fileName}`;
-      console.log(`Saving changes to: ${filePath}`);
-      await webcontainerInstance.fs.writeFile(filePath, value);
-      setFilesState((prevFiles) => ({
-        ...prevFiles,
-        [fileName]: { ...prevFiles[fileName], value },
-      }));
-    } catch (error) {
-      console.error("Error writing file:", error);
-      toast.error("Failed to save changes!");
-    }
-  };
-
-  const uploadToS3 = async () => {
-    console.log(filesState);
-    const filesToUpload = Object.keys(filesState).map((key) => ({
-      filename: filesState[key].name,
-      content: filesState[key].value,
-    }));
-
-    if (filesToUpload.length === 0) return;
-
-    console.log("Auto-save triggered.");
-
-    try {
-      const response = await fetch("/api/uploadS3", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ testId: params.id, files: filesToUpload }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        console.log("Auto-save successful:", data.message);
-        toast.success("Auto-saved successfully!");
-      } else {
-        console.error("Auto-save failed:", data.error);
-        toast.error("Auto-save failed!");
-      }
-    } catch (error) {
-      console.error("Error uploading to S3:", error);
-      toast.error("Auto-save encountered an error!");
-    }
-  };
-
-  useDebouncedEffect(
-    () => {
-      uploadToS3();
-    },
-    [filesState],
-    3000
-  ); // Debounce saveToS3 function with 3-second delay
-
   useEffect(() => {
     const initializeEditor = async () => {
       console.log(
@@ -550,7 +540,7 @@ export default function CodeRunner(params: Props) {
   };
 
   return (
-    <div className="max-w-screen text-white bg-slate-950 min-h-screen overflow-x-hidden flex">
+    <div className="max-w-screen text-white bg-slate-950 min-h-custom overflow-x-hidden flex">
       {/* Toast Container for notifications */}
       <Toaster
         position="top-right"
@@ -566,7 +556,7 @@ export default function CodeRunner(params: Props) {
 
       {isLoading && (
         <div className="fixed left-0 right-0 top-0 bottom-0 z-50">
-          <div className="graphPaper bg-slate-900 text-white h-screen w-screen flex items-center justify-center flex-col">
+          <div className="graphPaper bg-slate-900 text-white w-screen flex items-center justify-center flex-col">
             {/* LOGO */}
             <div className="flex">
               <motion.div className="w-12 h-12 bg-white rounded-xl rotate-45 -mr-1"></motion.div>
@@ -596,7 +586,7 @@ export default function CodeRunner(params: Props) {
             }}
             className="bg-slate-900 border-slate-700 border-r w-72 z-20 relative"
           >
-            <div className="bg-slate-900 border-slate-700 border-r w-72 p-3 flex flex-col justify-between h-screen">
+            <div className="bg-slate-900 border-slate-700 border-r w-72 p-3 flex flex-col justify-between">
               <div className="flex flex-col justify-between">
                 <ul className="list-none text-white flex flex-col gap-1 bg-slate-800 border-slate-700 border p-3 rounded-lg">
                   <div className="flex justify-between items-center">
@@ -659,7 +649,7 @@ export default function CodeRunner(params: Props) {
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="flex-1 flex flex-col h-screen">
+      <div className="flex-1 flex flex-col">
         <div className="bg-slate-900 border-b border-slate-700 flex justify-between p-3">
           <div className="flex-1 flex gap-2">
             <div
@@ -752,7 +742,6 @@ export default function CodeRunner(params: Props) {
                   (file.name.endsWith(".py") ? "python" : "javascript")
                 }
                 defaultValue={file.value}
-                onChange={handleEditorChange}
                 className="absolute left-0 right-0 bottom-0 top-0 border-r border-r-slate-700"
               />
             )}

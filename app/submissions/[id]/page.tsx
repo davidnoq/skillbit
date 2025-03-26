@@ -34,6 +34,10 @@ export default function Submissions({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { data: session, status } = useSession();
 
+  const [gradingInsights, setGradingInsights] = useState(
+    localStorage.getItem("gradingInsights") || ""
+  );
+
   const [email, setEmail] = useState("");
   const [userCompanyName, setUserCompanyName] = useState<string | null>(null);
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
@@ -44,6 +48,19 @@ export default function Submissions({ params }: { params: { id: string } }) {
   // Track expanded details for each candidate
   const [isExpanded, setIsExpanded] = useState(false);
   const [jobs, setJobs] = useState<Job[]>([]);
+
+  useEffect(() => {
+    // Listen for changes in localStorage
+    const handleStorageChange = () => {
+      setGradingInsights(localStorage.getItem("gradingInsights") || "");
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
 
   useEffect(() => {
     getTestIdData();
@@ -236,6 +253,7 @@ export default function Submissions({ params }: { params: { id: string } }) {
                 </div>
               </div>
             )}
+            <div className="">{gradingInsights}</div>
           </div>
         </div>
       </div>
