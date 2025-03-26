@@ -57,9 +57,9 @@ export async function POST(req: Request) {
       !recruiter &&
       (!listResponse.Contents || listResponse.Contents.length === 0)
     ) {
-      const prompt = await getPrompt(testId);
+      let prompt = await getPrompt(testId);
 
-      console.log(prompt);
+      console.log("Original prompt:", prompt);
 
       if (!prompt || prompt.length == 0) {
         return NextResponse.json(
@@ -68,9 +68,14 @@ export async function POST(req: Request) {
         );
       }
 
-      //Generate files for S3 bucket
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-      const files = await generateFilesFromPrompt(model, prompt);
+
+      // Step 1: First pass to Gemini to verify safety and format the prompt
+      const formattedPrompt = await verifyAndFormatPrompt(model, prompt);
+      console.log("Formatted prompt:", formattedPrompt);
+
+      // Step 2: Second pass to Gemini to generate files (using the formatted prompt)
+      const files = await generateFilesFromPrompt(model, formattedPrompt);
 
       if (!Array.isArray(files) || files.length === 0) {
         throw new Error("No files were generated from the prompt.");
@@ -194,6 +199,149 @@ async function streamToString(stream: any) {
   return Buffer.concat(chunks).toString("utf-8");
 }
 
+async function verifyAndFormatPrompt(
+  model: any,
+  originalPrompt: string
+): Promise<string> {
+  try {
+    const verificationPrompt = `
+I have a coding challenge prompt that needs verification and formatting. 
+
+First, verify that this prompt meets safety standards:
+- It should not contain harmful, offensive, or inappropriate content
+- It should be appropriate for a professional coding assessment
+- It should be clear and have well-defined requirements
+
+Second, format the prompt to be clear and structured with:
+- A clear problem statement
+- Specific requirements
+- Any constraints or specifications
+- Expected deliverables
+
+DO NOT include any code examples or implementation in your response, just format the prompt itself.
+
+Here's the original prompt:
+${originalPrompt}
+
+Please respond with:
+1. A brief assessment of whether the prompt meets safety and quality standards
+2. The formatted prompt that should be used for code generation
+`;
+
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: verificationPrompt }] }],
+    });
+
+    const response = await result.response.text();
+    console.log("Verification response:", response);
+
+    // Extract the formatted prompt section from the response
+    // This is a simple extraction - adjust the regex pattern if needed
+    const formattedPromptMatch = response.match(
+      /formatted prompt that should be used for code generation:?([\s\S]+)/i
+    );
+
+    let formattedPrompt = originalPrompt;
+    if (formattedPromptMatch && formattedPromptMatch[1]) {
+      // Use the formatted prompt
+      formattedPrompt = formattedPromptMatch[1].trim();
+      console.log("Formatted prompt:", formattedPrompt);
+    } else {
+      // If we can't extract the formatted prompt, fall back to the original
+      console.warn(
+        "Could not extract formatted prompt from Gemini response. Using original prompt."
+      );
+    }
+
+    // Now call Gemini again with clearer schema instructions
+    const schemaFormattingPrompt = `
+I need you to convert the following coding challenge prompt into a valid JSON format that matches this schema:
+${getSchemaFormatInstructions()}
+
+The prompt is:
+${formattedPrompt}
+
+Your response must be ONLY the valid JSON object, nothing else. No explanations, no code samples, just the JSON object.
+`;
+
+    const schemaResult = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: schemaFormattingPrompt }] }],
+    });
+
+    const schemaResponse = await schemaResult.response.text();
+    console.log("Schema formatting response:", schemaResponse);
+
+    // Ensure the response is valid JSON
+    try {
+      // Validate by parsing
+      JSON.parse(schemaResponse.trim());
+      // If valid, return the JSON string directly
+      return schemaResponse.trim();
+    } catch (error) {
+      console.error("Invalid JSON from schema formatting:", error);
+      // Fall back to the original prompt with schema instructions
+      return originalPrompt + getSchemaFormatInstructions();
+    }
+  } catch (error: any) {
+    console.error("Failed to verify and format prompt:", error);
+    // Return the original prompt on error as fallback
+    return originalPrompt + getSchemaFormatInstructions();
+  }
+}
+
+function getSchemaFormatInstructions(): string {
+  const schema = {
+    type: "object",
+    properties: {
+      files: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            filename: {
+              type: "string",
+              description: "The path and name of the file",
+            },
+            content: {
+              type: "string",
+              description: "The content of the file",
+            },
+            language: {
+              type: "string",
+              description: "The programming language of the file",
+            },
+          },
+          required: ["filename", "content", "language"],
+        },
+      },
+    },
+    required: ["files"],
+  };
+
+  return `
+The response should be valid JSON matching this schema:
+${JSON.stringify(schema, null, 2)}
+
+Example of a valid response:
+{
+  "files": [
+    {
+      "filename": "app.js",
+      "content": "console.log('Hello world');\\n// More code here",
+      "language": "javascript"
+    },
+    {
+      "filename": "styles.css",
+      "content": "body {\\n  margin: 0;\\n}",
+      "language": "css"
+    }
+  ]
+}
+
+Make sure to escape newlines with \\n in the content.
+Provide ONLY the JSON object in your response, no additional text or explanations.`;
+}
+
 async function generateFilesFromPrompt(
   model: any,
   prompt: string
@@ -204,6 +352,22 @@ async function generateFilesFromPrompt(
       /Please use (\w+) as the primary programming language/i
     );
     const primaryLanguage = languageMatch ? languageMatch[1] : null;
+
+    // Check if the prompt is already in JSON format
+    let files = [];
+    try {
+      const parsedPrompt = JSON.parse(prompt);
+      if (parsedPrompt.files && Array.isArray(parsedPrompt.files)) {
+        console.log("Prompt is already in JSON format, using directly");
+        return parsedPrompt.files.map((file: any) => ({
+          name: file.filename,
+          content: file.content.replace(/\\n/g, "\n"),
+        }));
+      }
+    } catch (e) {
+      // Not JSON, continue with normal flow
+      console.log("Prompt is not in JSON format, generating content");
+    }
 
     // Add specific instructions based on language
     let enhancedPrompt = prompt;
@@ -219,31 +383,57 @@ async function generateFilesFromPrompt(
 
     console.log("Raw response:", response);
 
+    // Try to parse the response as JSON
+    try {
+      const parsed = JSON.parse(response.trim());
+      if (parsed.files && Array.isArray(parsed.files)) {
+        // Process the generated files to replace '\\n' with actual newlines
+        return parsed.files.map(
+          (file: { filename: string; content: string }) => ({
+            name: file.filename,
+            content: file.content.replace(/\\n/g, "\n"),
+          })
+        );
+      }
+    } catch (e) {
+      console.log("Failed direct parsing, attempting to extract JSON:", e);
+    }
+
+    // If direct parsing fails, try to extract JSON from the response
     // Clean the response to ensure it's valid JSON
     const cleanedResponse = response.replace(/```json|```/g, "").trim();
 
+    // Find the JSON object in the response
     const jsonStart = cleanedResponse.indexOf("{");
     const jsonEnd = cleanedResponse.lastIndexOf("}") + 1;
-    const jsonResponse = cleanedResponse.substring(jsonStart, jsonEnd);
 
-    const parsed = JSON.parse(jsonResponse);
-    const generatedFiles = parsed.files;
-
-    console.log("generatedFiles:", generatedFiles);
-
-    if (!Array.isArray(generatedFiles)) {
-      throw new Error("Generated files are not in an array format.");
+    if (jsonStart === -1 || jsonEnd <= jsonStart) {
+      throw new Error("Could not find valid JSON in the response");
     }
 
-    // Process the generated files to replace '\\n' with actual newlines
-    const processedFiles = generatedFiles.map(
-      (file: { filename: string; content: string }) => ({
-        name: file.filename,
-        content: file.content.replace(/\\n/g, "\n"),
-      })
-    );
+    const jsonResponse = cleanedResponse.substring(jsonStart, jsonEnd);
 
-    return processedFiles;
+    try {
+      const parsed = JSON.parse(jsonResponse);
+      const generatedFiles = parsed.files;
+
+      console.log("generatedFiles:", generatedFiles);
+
+      if (!Array.isArray(generatedFiles)) {
+        throw new Error("Generated files are not in an array format.");
+      }
+
+      // Process the generated files to replace '\\n' with actual newlines
+      return generatedFiles.map(
+        (file: { filename: string; content: string }) => ({
+          name: file.filename,
+          content: file.content.replace(/\\n/g, "\n"),
+        })
+      );
+    } catch (error) {
+      console.error("Failed to parse JSON after cleaning:", error);
+      throw new Error("The API response could not be parsed as valid JSON.");
+    }
   } catch (error: any) {
     console.error("Failed to generate files from prompt:", error);
     throw new Error("Failed to generate files from the prompt.");
@@ -288,40 +478,7 @@ async function getPrompt(id: string) {
       enhancedPrompt += `\n\nThis is a ${questionType.toLowerCase()}.`;
     }
 
-    const schema = {
-      type: "object",
-      properties: {
-        files: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              filename: {
-                type: "string",
-                description: "The path and name of the file",
-              },
-              content: {
-                type: "string",
-                description: "The content of the file",
-              },
-              language: {
-                type: "string",
-                description: "The programming language of the file",
-              },
-            },
-            required: ["filename", "content", "language"],
-          },
-        },
-      },
-      required: ["files"],
-    };
-
-    const systemPart = ` The response should be valid JSON matching this schema:
-    ${JSON.stringify(schema, null, 2)}
-    
-    Make sure to escape newlines with \\n in the content.`;
-
-    return enhancedPrompt + systemPart;
+    return enhancedPrompt;
   } catch (error) {
     console.error(error);
     return null;

@@ -688,42 +688,16 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                         </div>
                         <div
                           className={`rounded-xl border ${
-                            language === "C++" && framework === ""
+                            language === "Python" && framework === ""
                               ? "bg-indigo-600 border-indigo-600"
                               : "bg-slate-800 border-slate-700 hover:bg-slate-700"
                           } p-3 cursor-pointer transition-colors duration-100`}
                           onClick={() => {
-                            setLanguage("C++");
+                            setLanguage("Python");
                             setFramework("");
                           }}
                         >
-                          C++
-                        </div>
-                        <div
-                          className={`rounded-xl border ${
-                            language === "Java" && framework === ""
-                              ? "bg-indigo-600 border-indigo-600"
-                              : "bg-slate-800 border-slate-700 hover:bg-slate-700"
-                          } p-3 cursor-pointer transition-colors duration-100`}
-                          onClick={() => {
-                            setLanguage("Java");
-                            setFramework("");
-                          }}
-                        >
-                          Java
-                        </div>
-                        <div
-                          className={`rounded-xl border ${
-                            language === "SQL" && framework === ""
-                              ? "bg-indigo-600 border-indigo-600"
-                              : "bg-slate-800 border-slate-700 hover:bg-slate-700"
-                          } p-3 cursor-pointer transition-colors duration-100`}
-                          onClick={() => {
-                            setLanguage("SQL");
-                            setFramework("");
-                          }}
-                        >
-                          SQL
+                          Python
                         </div>
                       </div>
                     </div>
