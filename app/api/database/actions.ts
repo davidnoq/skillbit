@@ -11,6 +11,26 @@ import App from "next/app";
 import { render } from "@react-email/render";
 import logo_full_transparent_blue from "/assets/branding/logos/logo_full_transparent_blue.png";
 import { Question } from "@prisma/client";
+import { gradingInsightsGenerator } from "../gradingInsights/route";
+
+const {
+  S3Client,
+  DeleteObjectsCommand,
+  GetObjectCommand,
+  ListObjectsV2Command,
+  HeadObjectCommand,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} = require("@aws-sdk/client-s3");
+
+// Initialize an S3 client with provided credentials
+const s3Client = new S3Client({
+  region: process.env.S3_REGION, // Specify the AWS region from environment variables
+  credentials: {
+    accessKeyId: process.env.S3_ACCESSKEYID, // Access key ID from environment variables
+    secretAccessKey: process.env.S3_SECRETACCESSKEY, // Secret access key from environment variables
+  },
+});
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -715,6 +735,61 @@ export async function markSubmitted(id: string) {
         status: "Submitted",
       },
     });
+
+    //getting files from s3
+
+    // List all objects under the folder (testId)
+    const listParams = {
+      Bucket: "skillbit-inprogress",
+      Prefix: `${id}/`, // Fetch all files under this folder
+    };
+
+    const listCommand = new ListObjectsV2Command(listParams);
+    const listResponse = await s3Client.send(listCommand);
+
+    const filesWithContent = listResponse.Contents
+      ? await Promise.all(
+          listResponse.Contents.map(async (file: any) => {
+            const getCommand = new GetObjectCommand({
+              Bucket: "skillbit-inprogress",
+              Key: file.Key,
+            });
+
+            const response = await s3Client.send(getCommand);
+            const content = await streamToString(response.Body);
+
+            return { fileName: file.Key, content };
+          })
+        )
+      : [];
+
+    console.log("filesWithContent:", filesWithContent);
+
+    const files = filesWithContent;
+    console.log("THEFILES:", files);
+
+    //getting instructions from the database
+    const instructions = await getInstructions(id);
+
+    //generating grading insights
+
+    const gradingInsightsData = await gradingInsightsGenerator(
+      files,
+      instructions?.instructions,
+      id
+    );
+
+    //storing grading insights in the database
+
+    const gradingInsights = await prisma.testID.update({
+      where: {
+        id: id,
+      },
+      data: {
+        gradingInsights: gradingInsightsData,
+      },
+    });
+
     return "Success";
   } catch (error) {
     console.error(error);
@@ -1065,6 +1140,23 @@ export async function createJobRecord(companyId: string, name: string) {
   }
 }
 
+export async function getGradingInsights(id: string) {
+  try {
+    const gradingInsights = await prisma.testID.findUnique({
+      where: {
+        id: id,
+      },
+      select: {
+        gradingInsights: true,
+      },
+    });
+    return gradingInsights;
+  } catch (error) {
+    console.error("Error retrieving jobs:", error);
+    return null;
+  }
+}
+
 /**
  * Retrieve all jobs for a given company.
  * @param companyId The company's ID
@@ -1084,4 +1176,13 @@ export async function getCompanyJobsForCompany(companyId: string) {
     console.error("Error retrieving jobs:", error);
     return null;
   }
+}
+
+// Helper function to convert stream to string
+async function streamToString(stream: any) {
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString("utf-8");
 }

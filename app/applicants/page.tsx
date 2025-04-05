@@ -607,7 +607,7 @@ const Applicants = () => {
                                   }
                                 >
                                   <>
-                                    View Submission
+                                    View Grading Insights
                                     <div className="scale-75">
                                       <div className="arrow flex items-center justify-center">
                                         <div className="arrowMiddle" />

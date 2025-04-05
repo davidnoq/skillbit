@@ -87,6 +87,7 @@ model testID {
   company        Company   @relation(fields: [companyID], references: [id], onDelete: Cascade)
   template       Question? @relation(fields: [templateID], references: [id], onDelete: Cascade)
   job            Job?      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  gradingInsights String?   @default("")
 }
 
 model Question {

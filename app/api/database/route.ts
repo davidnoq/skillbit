@@ -35,6 +35,7 @@ import {
   getIsSample,
   createJobRecord,
   getCompanyJobsForCompany,
+  getGradingInsights,
 } from "./actions";
 import { send } from "process";
 
@@ -163,7 +164,10 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    return NextResponse.json({ message: "Success", job: newJob }, { status: 200 });
+    return NextResponse.json(
+      { message: "Success", job: newJob },
+      { status: 200 }
+    );
   } else if (data.action === "getCompanyJobs") {
     const { companyId } = data;
     const jobs = await getCompanyJobsForCompany(companyId);
@@ -174,9 +178,17 @@ export async function POST(req: Request) {
       );
     }
     return NextResponse.json({ message: jobs }, { status: 200 });
-  }
-
-  else if (data.action === "findQuestions") {
+  } else if (data.action === "getGradingInsights") {
+    const { id } = data;
+    const gradingInsights = await getGradingInsights(id);
+    if (!gradingInsights) {
+      return NextResponse.json(
+        { message: "Error retrieving gradingInsights." },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json({ message: gradingInsights }, { status: 200 });
+  } else if (data.action === "findQuestions") {
     const response = await findQuestions(data.company);
     if (response == null) {
       return NextResponse.json(
@@ -334,7 +346,7 @@ export async function POST(req: Request) {
       data.applicantData,
       data.template,
       data.company,
-      data.jobId  // <-- NEW: Pass jobId to actions
+      data.jobId // <-- NEW: Pass jobId to actions
     );
     if (response == null) {
       return NextResponse.json(

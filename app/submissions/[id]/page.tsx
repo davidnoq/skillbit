@@ -13,6 +13,7 @@ import { useSession } from "next-auth/react";
 import Loader from "@/components/loader/loader";
 import { Toaster, toast } from "react-hot-toast";
 import Sidebar from "@/components/sidebar/sidebar";
+import GaugeChart from "@/components/gaugechart/gaugechart";
 
 interface TestIDInterface {
   companyID: string;
@@ -62,63 +63,63 @@ export default function Submissions({ params }: { params: { id: string } }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [jobs, setJobs] = useState<Job[]>([]);
 
-  useEffect(() => {
-    // Listen for changes in localStorage
-    const handleStorageChange = () => {
-      const gradingInsightsString =
-        localStorage.getItem("gradingInsights") || "";
+  // useEffect(() => {
+  //   // Listen for changes in localStorage
+  //   const handleStorageChange = () => {
+  //     const gradingInsightsString =
+  //       localStorage.getItem("gradingInsights") || "";
 
-      const gradingInsightsParsed = JSON.parse(gradingInsightsString);
-      gradingInsightsParsed.data.response = JSON.parse(
-        gradingInsightsParsed.data.response
-      );
+  //     const gradingInsightsParsed = JSON.parse(gradingInsightsString);
+  //     gradingInsightsParsed.data.response = JSON.parse(
+  //       gradingInsightsParsed.data.response
+  //     );
 
-      const gradingInsightsSimplified =
-        gradingInsightsParsed.data.response.response[0];
+  //     const gradingInsightsSimplified =
+  //       gradingInsightsParsed.data.response.response[0];
 
-      console.log("gradingInsightsSimplified:", gradingInsightsSimplified);
+  //     console.log("gradingInsightsSimplified:", gradingInsightsSimplified);
 
-      const gradingInsightsSetup: GradingInsights = {
-        totalScore: gradingInsightsSimplified.total_score,
-        correctness: {
-          score: gradingInsightsSimplified.correctness[0].score,
-          explanation: gradingInsightsSimplified.correctness[0].explanation,
-        },
-        efficiency: {
-          score: gradingInsightsSimplified.efficiency[0].score,
-          explanation: gradingInsightsSimplified.efficiency[0].explanation,
-        },
-        codestyle: {
-          score: gradingInsightsSimplified.codestyle[0].score,
-          explanation: gradingInsightsSimplified.codestyle[0].explanation,
-        },
-        problemsolvingapproach: {
-          score: gradingInsightsSimplified.problemsolvingapproach[0].score,
-          explanation:
-            gradingInsightsSimplified.problemsolvingapproach[0].explanation,
-        },
-        edgecasehandling: {
-          score: gradingInsightsSimplified.edgecasehandling[0].score,
-          explanation:
-            gradingInsightsSimplified.edgecasehandling[0].explanation,
-        },
-        clarity: {
-          score: gradingInsightsSimplified.clarity[0].score,
-          explanation: gradingInsightsSimplified.clarity[0].explanation,
-        },
-      };
+  //     const gradingInsightsSetup: GradingInsights = {
+  //       totalScore: gradingInsightsSimplified.total_score,
+  //       correctness: {
+  //         score: gradingInsightsSimplified.correctness[0].score,
+  //         explanation: gradingInsightsSimplified.correctness[0].explanation,
+  //       },
+  //       efficiency: {
+  //         score: gradingInsightsSimplified.efficiency[0].score,
+  //         explanation: gradingInsightsSimplified.efficiency[0].explanation,
+  //       },
+  //       codestyle: {
+  //         score: gradingInsightsSimplified.codestyle[0].score,
+  //         explanation: gradingInsightsSimplified.codestyle[0].explanation,
+  //       },
+  //       problemsolvingapproach: {
+  //         score: gradingInsightsSimplified.problemsolvingapproach[0].score,
+  //         explanation:
+  //           gradingInsightsSimplified.problemsolvingapproach[0].explanation,
+  //       },
+  //       edgecasehandling: {
+  //         score: gradingInsightsSimplified.edgecasehandling[0].score,
+  //         explanation:
+  //           gradingInsightsSimplified.edgecasehandling[0].explanation,
+  //       },
+  //       clarity: {
+  //         score: gradingInsightsSimplified.clarity[0].score,
+  //         explanation: gradingInsightsSimplified.clarity[0].explanation,
+  //       },
+  //     };
 
-      console.log(gradingInsightsSetup);
+  //     console.log(gradingInsightsSetup);
 
-      setGradingInsights(gradingInsightsSetup);
-    };
+  //     setGradingInsights(gradingInsightsSetup);
+  //   };
 
-    window.addEventListener("storage", handleStorageChange);
+  //   window.addEventListener("storage", handleStorageChange);
 
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-    };
-  }, []);
+  //   return () => {
+  //     window.removeEventListener("storage", handleStorageChange);
+  //   };
+  // }, []);
 
   useEffect(() => {
     getTestIdData();
@@ -152,6 +153,69 @@ export default function Submissions({ params }: { params: { id: string } }) {
     }
   };
 
+  const getGradingInsights = async () => {
+    try {
+      toast.loading("Loading grading insights...");
+      const res = await fetch("/api/database", {
+        method: "POST",
+        headers: { "Content-type": "application/json" },
+        body: JSON.stringify({
+          action: "getGradingInsights",
+          id: params.id,
+        }),
+      });
+      const gradingInsightsString = await res.json();
+
+      const gradingInsightsParsed = JSON.parse(
+        gradingInsightsString.message.gradingInsights
+      );
+
+      console.log("gradingInsightsParsed:", gradingInsightsParsed);
+
+      const gradingInsightsSimplified = gradingInsightsParsed.response[0];
+
+      console.log("gradingInsightsSimplified:", gradingInsightsSimplified);
+
+      const gradingInsightsSetup: GradingInsights = {
+        totalScore: gradingInsightsSimplified.total_score,
+        correctness: {
+          score: gradingInsightsSimplified.correctness[0].score,
+          explanation: gradingInsightsSimplified.correctness[0].explanation,
+        },
+        efficiency: {
+          score: gradingInsightsSimplified.efficiency[0].score,
+          explanation: gradingInsightsSimplified.efficiency[0].explanation,
+        },
+        codestyle: {
+          score: gradingInsightsSimplified.codestyle[0].score,
+          explanation: gradingInsightsSimplified.codestyle[0].explanation,
+        },
+        problemsolvingapproach: {
+          score: gradingInsightsSimplified.problemsolvingapproach[0].score,
+          explanation:
+            gradingInsightsSimplified.problemsolvingapproach[0].explanation,
+        },
+        edgecasehandling: {
+          score: gradingInsightsSimplified.edgecasehandling[0].score,
+          explanation:
+            gradingInsightsSimplified.edgecasehandling[0].explanation,
+        },
+        clarity: {
+          score: gradingInsightsSimplified.clarity[0].score,
+          explanation: gradingInsightsSimplified.clarity[0].explanation,
+        },
+      };
+
+      console.log("gradingInsightsSetup:", gradingInsightsSetup);
+
+      setGradingInsights(gradingInsightsSetup);
+      toast.remove();
+    } catch (error) {
+      toast.remove();
+      console.error("Error loading grading insights:", error);
+    }
+  };
+
   useEffect(() => {
     const getData = async () => {
       if (session) {
@@ -180,6 +244,8 @@ export default function Submissions({ params }: { params: { id: string } }) {
           setUserApprovalStatus(userData.message.employee.isApproved);
 
           await loadJobs(userData.message.employee.company.id);
+
+          await getGradingInsights();
         }
         setCompanyDataLoaded(true);
         toast.remove();
@@ -190,12 +256,6 @@ export default function Submissions({ params }: { params: { id: string } }) {
       getData();
     }
   }, [session, status]);
-
-  if (status === "loading") return <Loader />;
-  if (status === "unauthenticated") {
-    router.push("/auth");
-    return null;
-  }
 
   const loadJobs = async (companyId: string) => {
     try {
@@ -214,6 +274,12 @@ export default function Submissions({ params }: { params: { id: string } }) {
     }
   };
 
+  if (status === "loading") {
+    return <Loader></Loader>;
+  } else if (status === "unauthenticated") {
+    router.push("/auth");
+    return null;
+  }
   return (
     <>
       <div className="max-w-screen text-white flex overflow-x-hidden max-h-screen overflow-y-hidden">
@@ -227,23 +293,6 @@ export default function Submissions({ params }: { params: { id: string } }) {
               <h1 className="">Grading Insights</h1>
               {candidate && (
                 <div className="mt-2 flex items-center gap-2">
-                  <div className="flex gap-2 items-center justify-center bg-slate-900 px-3 py-1 rounded-full border border-slate-800 w-fit text-xs">
-                    {candidate.status == "Sent" && (
-                      <div className="w-2 h-2 rounded-full bg-blue-600"></div>
-                    )}
-                    {candidate.status == "Not Sent" && (
-                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                    )}
-                    {candidate.status == "Expired" && (
-                      <div className="w-2 h-2 rounded-full bg-gray-500"></div>
-                    )}
-                    {candidate.status != "Sent" &&
-                      candidate.status != "Not Sent" &&
-                      candidate.status != "Expired" && (
-                        <div className="w-2 h-2 rounded-full bg-green-600"></div>
-                      )}
-                    {candidate.status}
-                  </div>
                   <div
                     onClick={() => setIsExpanded(!isExpanded)}
                     className="cursor-pointer relative flex gap-2 items-center justify-center bg-slate-900 px-3 py-1 rounded-full border border-slate-800 w-fit text-xs"
@@ -313,19 +362,104 @@ export default function Submissions({ params }: { params: { id: string } }) {
                 </div>
               )}
             </div>
-            <h1 className="">Total score: {gradingInsights?.totalScore}</h1>
-            <div className="flex-1 overflow-y-auto bg-slate-900 border border-slate-800 rounded-lg p-6 flex flex-col gap-6">
-              {gradingInsights &&
-                Object.keys(gradingInsights)
-                  .filter((key) => key !== "totalScore") // Exclude totalScore
-                  .map((key) => (
-                    <div key={key}>
-                      <h1>{key}</h1>
-                      <p>Score: {gradingInsights[key].score}</p>
-                      <p>Explanation: {gradingInsights[key].explanation}</p>
-                    </div>
-                  ))}
-            </div>
+            {!gradingInsights && (
+              <div className="flex flex-col items-center justify-center gap-2">
+                <div className="flex justify-center items-center scale-150 mt-6">
+                  <div className="lds-ring">
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                  </div>
+                </div>
+                <p>Generating grading insights...</p>
+              </div>
+            )}
+            {gradingInsights && (
+              <div className="flex justify-center items-center">
+                <GaugeChart percent={gradingInsights?.totalScore || 0} />
+              </div>
+            )}
+            {gradingInsights && (
+              <div className="flex items-center gap-2">
+                <div className="flex gap-2 items-center justify-center bg-slate-900 px-3 py-1 rounded-full border border-slate-800 w-fit text-xs">
+                  {gradingInsights.totalScore / 30 < 0.7 && (
+                    <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                  )}
+                  {gradingInsights.totalScore / 30 >= 0.7 && (
+                    <div className="w-2 h-2 rounded-full bg-green-600"></div>
+                  )}
+                  {gradingInsights.totalScore / 30 < 0.7 && (
+                    <p className="text-xs">Failed</p>
+                  )}
+                  {gradingInsights.totalScore / 30 >= 0.7 && (
+                    <p className="text-xs">Passed</p>
+                  )}
+                </div>
+                <div className="flex gap-2 items-center justify-center bg-slate-900 px-3 py-1 rounded-full border border-slate-800 w-fit text-xs">
+                  <h1 className="text-xs">Raw Score:</h1>
+                  <p className="text-xs">{gradingInsights.totalScore}/30</p>
+                </div>
+              </div>
+            )}
+            {gradingInsights && (
+              <div
+                className="flex-1 overflow-y-auto flex flex-col gap-6"
+                style={{
+                  scrollbarWidth: "thin",
+                  scrollbarColor: "rgb(51 65 85) transparent",
+                }}
+              >
+                {gradingInsights &&
+                  Object.keys(gradingInsights)
+                    .filter((key) => key !== "totalScore") // Exclude totalScore
+                    .map((key) => (
+                      <div
+                        key={key}
+                        className="bg-slate-900 border border-slate-800 rounded-lg p-6"
+                      >
+                        {key == "correctness" && <h1>Correctness</h1>}
+                        {key == "efficiency" && <h1>Efficiency</h1>}
+                        {key == "codestyle" && <h1>Code Style</h1>}
+                        {key == "problemsolvingapproach" && (
+                          <h1>Problem Solving Approach</h1>
+                        )}
+                        {key == "edgecasehandling" && (
+                          <h1>Edge Case Handling</h1>
+                        )}
+                        {key == "clarity" && <h1>Clarity</h1>}
+                        {gradingInsights[key].score == 5 && (
+                          <div className="flex gap-2 items-center justify-center bg-slate-800 px-3 py-1 rounded-full border border-green-600 w-fit text-xs my-2">
+                            <h1 className="text-xs">Score:</h1>
+                            <p className="text-xs">
+                              {gradingInsights[key].score}/5
+                            </p>
+                          </div>
+                        )}
+                        {(gradingInsights[key].score == 4 ||
+                          gradingInsights[key].score == 3) && (
+                          <div className="flex gap-2 items-center justify-center bg-slate-800 px-3 py-1 rounded-full border border-orange-400 w-fit text-xs my-2">
+                            <h1 className="text-xs">Score:</h1>
+                            <p className="text-xs">
+                              {gradingInsights[key].score}/5
+                            </p>
+                          </div>
+                        )}
+                        {(gradingInsights[key].score == 2 ||
+                          gradingInsights[key].score == 1 ||
+                          gradingInsights[key].score == 0) && (
+                          <div className="flex gap-2 items-center justify-center bg-slate-800 px-3 py-1 rounded-full border border-red-500 w-fit text-xs my-2">
+                            <h1 className="text-xs">Score:</h1>
+                            <p className="text-xs">
+                              {gradingInsights[key].score}/5
+                            </p>
+                          </div>
+                        )}
+                        <p>{gradingInsights[key].explanation}</p>
+                      </div>
+                    ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

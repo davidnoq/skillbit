@@ -172,40 +172,40 @@ export default function CodeRunner(params: Props) {
       setFileName(firstFilename);
       setShowBrowser(!hasPythonFiles); // Hide browser for Python projects
 
-      await fetchGradingInsights(files, instructions);
+      // await fetchGradingInsights(files, instructions);
     } catch (error) {
       console.error("Error fetching files from S3:", error);
       toast.error("Failed to load files from S3!");
     }
   };
 
-  const fetchGradingInsights = async (files: any, instructions: string) => {
-    try {
-      const response = await fetch("/api/gradingInsights", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          files: files,
-          instructions: instructions,
-          testId: params.id,
-        }),
-      });
+  // const fetchGradingInsights = async (files: any, instructions: string) => {
+  //   try {
+  //     const response = await fetch("/api/gradingInsights", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({
+  //         files: files,
+  //         instructions: instructions,
+  //         testId: params.id,
+  //       }),
+  //     });
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch grading insights");
-      }
+  //     if (!response.ok) {
+  //       throw new Error("Failed to fetch grading insights");
+  //     }
 
-      const data = await response.json();
-      console.log("success getting grading insights:", data);
-      localStorage.setItem("gradingInsights", JSON.stringify({ data }));
-      window.dispatchEvent(new Event("storage"));
-    } catch (error) {
-      console.error("Error fetching grading insights:", error);
-      toast.error("Failed to fetch grading insights");
-    }
-  };
+  //     const data = await response.json();
+  //     console.log("success getting grading insights:", data);
+  //     localStorage.setItem("gradingInsights", JSON.stringify({ data }));
+  //     window.dispatchEvent(new Event("storage"));
+  //   } catch (error) {
+  //     console.error("Error fetching grading insights:", error);
+  //     toast.error("Failed to fetch grading insights");
+  //   }
+  // };
 
   // Start the editor and initialize WebContainer
   const startEditor = async () => {
@@ -554,10 +554,9 @@ export default function CodeRunner(params: Props) {
         }}
       />
 
-      {isLoading && (
+      {/* {isLoading && (
         <div className="fixed left-0 right-0 top-0 bottom-0 z-50">
           <div className="graphPaper bg-slate-900 text-white w-screen flex items-center justify-center flex-col">
-            {/* LOGO */}
             <div className="flex">
               <motion.div className="w-12 h-12 bg-white rounded-xl rotate-45 -mr-1"></motion.div>
               <motion.div className="w-12 h-12 bg-white rounded-xl rotate-45 -ml-1"></motion.div>
@@ -572,7 +571,7 @@ export default function CodeRunner(params: Props) {
             </motion.p>
           </div>
         </div>
-      )}
+      )} */}
       <AnimatePresence>
         {showSidebar && (
           <motion.div

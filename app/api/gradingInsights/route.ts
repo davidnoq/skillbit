@@ -12,30 +12,48 @@ export async function POST(req: Request) {
     // Parse request body
     console.log("grading insights:");
     const { files, instructions, testId } = await req.json();
-    console.log("THESE ARE THE FILES: ", files, instructions, testId);
 
-    if (!testId || !instructions || !files) {
+    const gradingInsightsResponse = await gradingInsightsGenerator(
+      files,
+      instructions,
+      testId
+    );
+
+    if (gradingInsightsResponse == "Invalid input. Provide all parameters.") {
       return NextResponse.json(
         { error: "Invalid input. Provide all parameters." },
         { status: 400 }
       );
     }
 
-    const userPrompt = await getPrompt(files, instructions);
-
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const response = await generateInstructionsFromPrompt(
-      model,
-      userPrompt || ""
-    );
-
-    console.log("RESPONSE:", response);
-
-    return NextResponse.json({ response });
+    return NextResponse.json({ gradingInsightsResponse });
   } catch (error: any) {
     console.error("Error retrieving file:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+}
+
+export async function gradingInsightsGenerator(
+  files: any,
+  instructions: any,
+  testId: any
+) {
+  console.log("THESE ARE THE FILES: ", files, instructions, testId);
+  if (!testId || !instructions || !files) {
+    return "Invalid input. Provide all parameters.";
+  }
+  const userPrompt = await getPrompt(files, instructions);
+
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const response = await generateInstructionsFromPrompt(
+    model,
+    userPrompt || ""
+  );
+
+  console.log("RESPONSE:", response);
+
+  await setGradingInsights(testId, response);
+  return response;
 }
 
 async function generateInstructionsFromPrompt(
@@ -327,3 +345,19 @@ async function getPromptInstructions(id: string) {
     return null;
   }
 }
+
+const setGradingInsights = async (id: string, gradingInsights: string) => {
+  try {
+    await prisma.testID.update({
+      where: {
+        id: id,
+      },
+      data: {
+        gradingInsights: gradingInsights,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+};
