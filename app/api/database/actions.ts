@@ -763,10 +763,7 @@ export async function markSubmitted(id: string) {
         )
       : [];
 
-    console.log("filesWithContent:", filesWithContent);
-
     const files = filesWithContent;
-    console.log("THEFILES:", files);
 
     //getting instructions from the database
     const instructions = await getInstructions(id);
@@ -779,6 +776,8 @@ export async function markSubmitted(id: string) {
       id
     );
 
+    console.log("Grading Insights Data:", gradingInsightsData);
+
     //storing grading insights in the database
 
     const gradingInsights = await prisma.testID.update({
@@ -787,6 +786,7 @@ export async function markSubmitted(id: string) {
       },
       data: {
         gradingInsights: gradingInsightsData,
+        // score: gradingInsightsData.response[0].total_score,
       },
     });
 
