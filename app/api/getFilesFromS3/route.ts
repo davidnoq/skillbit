@@ -226,6 +226,16 @@ ${originalPrompt}
 Please respond with:
 1. A brief assessment of whether the prompt meets safety and quality standards
 2. The formatted prompt that should be used for code generation
+
+Make sure the formatted prompt does NOT include any test cases, example solutions, or answers. The prompt should only describe the problem to be solved without providing any implementation details or expected outputs. Remove any existing test cases or solutions from the prompt before formatting.
+
+If the original prompt contains test cases or solutions, they must be completely removed. The formatted prompt should only contain:
+1. Problem description
+2. Requirements
+3. Constraints
+4. Expected input/output format (without examples)
+
+The new prompt must specify that there should be no test cases, example solutions, or answers.
 `;
 
     const result = await model.generateContent({
