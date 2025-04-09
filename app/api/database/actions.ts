@@ -11,7 +11,7 @@ import App from "next/app";
 import { render } from "@react-email/render";
 import logo_full_transparent_blue from "/assets/branding/logos/logo_full_transparent_blue.png";
 import { Question } from "@prisma/client";
-import { gradingInsightsGenerator } from "../gradingInsights/route";
+import { gradingInsightsGenerator } from "../gradingInsights/gradingInsights";
 
 const {
   S3Client,
