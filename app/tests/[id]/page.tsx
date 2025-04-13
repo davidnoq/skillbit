@@ -91,6 +91,7 @@ export default function Tests({ params }: { params: { id: string } }) {
   const [instructions, setInstructions] = useState("");
   const [viewFullInstructions, setViewFullInstructions] = useState(false);
   const [isSample, setIsSample] = useState(false);
+  const [confirmSubmit, setConfirmSubmit] = useState(false);
 
   const fetchFilesFromS3 = async () => {
     try {
@@ -727,7 +728,7 @@ export default function Tests({ params }: { params: { id: string } }) {
 
       {!isLoading && timeLeft !== null && (
         <div
-          className={`absolute top-3 right-60 text-xl ${
+          className={`absolute top-3 right-2 text-xl ${
             timeLeft <= 300 ? "text-red-500" : "text-white"
           } bg-black bg-opacity-50 px-3 py-2 rounded-md`}
         >
@@ -857,6 +858,64 @@ export default function Tests({ params }: { params: { id: string } }) {
                       </motion.div>
                     )}
                   </AnimatePresence>
+                  <AnimatePresence>
+                  {confirmSubmit && (
+                    <motion.div
+                      className="fixed inset-0 z-50 flex justify-center items-center
+                                bg-slate-950 bg-opacity-60 p-6 backdrop-blur-sm"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.5, ease: 'backOut' }}
+                    >
+                      <motion.div
+                        className="bg-slate-900 p-6 rounded-xl border border-slate-800
+                                  w-full max-w-md"
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 30 }}
+                        transition={{ duration: 0.5, ease: 'backOut' }}
+                      >
+                        <h1 className="text-xl font-semibold mb-4">Submit your work?</h1>
+                        <p className="mb-6">
+                          Once you confirm, the project will be uploaded and you won’t be able
+                          to make further changes.
+                        </p>
+
+                        <div className="flex flex-col gap-3">
+                          {/* CONFIRM */}
+                          <motion.button
+                            className="w-full bg-slate-800 border border-slate-700 px-6 py-3
+                                      rounded-lg flex justify-center items-center
+                                      transition-colors duration-200"
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 30 }}
+                            onClick={async () => {
+                              setConfirmSubmit(false);   // close modal
+                              await handleSubmit();      // run your existing submit logic
+                            }}
+                          >
+                            Yes, submit
+                          </motion.button>
+
+                          {/* CANCEL */}
+                          <motion.button
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 px-6 py-3
+                                      rounded-lg flex justify-center items-center
+                                      hover:bg-slate-700 transition-colors duration-200"
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 30 }}
+                            onClick={() => setConfirmSubmit(false)}
+                          >
+                            Cancel
+                          </motion.button>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 </ul>
                 <ul className="list-none text-white flex flex-col gap-1 bg-slate-800 border-slate-700 border p-3 rounded-lg mt-3">
                   <div className="flex justify-between items-center">
@@ -899,31 +958,6 @@ export default function Tests({ params }: { params: { id: string } }) {
                   </ul>
                 </ul>
               </div>
-              <div className="flex flex-col justify-between">
-                {!isSample && (
-                  <motion.button
-                    className="w-full bg-indigo-600 px-6 py-3 rounded-lg flex justify-center items-center m-auto hover:bg-opacity-100"
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.2, ease: "backOut" }}
-                    onClick={handleSubmit}
-                  >
-                    Submit{" "}
-                    <div className="arrow flex items-center justify-center">
-                      <div className="arrowMiddle"></div>
-                      <div>
-                        <Image
-                          src={Arrow}
-                          alt=""
-                          width={14}
-                          height={14}
-                          className="arrowSide"
-                        ></Image>
-                      </div>
-                    </div>
-                  </motion.button>
-                )}
-              </div>
             </div>
           </motion.div>
         )}
@@ -953,21 +987,6 @@ export default function Tests({ params }: { params: { id: string } }) {
             <h1 className="text-white text-2xl">Skillbit</h1>
           </div>
           <div className="flex-1 flex justify-end items-center gap-2">
-            <div
-              className="flex p-2 rounded-md hover:bg-slate-800 border border-transparent hover:border-slate-700 cursor-pointer"
-              style={{
-                backgroundColor: showTerminal ? "#1e293b" : "",
-                border: showTerminal ? "1px solid #334155" : "",
-              }}
-              onClick={() => setShowTerminal(!showTerminal)}
-            >
-              <Image
-                src={TerminalIcon}
-                alt="Terminal"
-                width={20}
-                height={20}
-              ></Image>
-            </div>
             {!isPythonProject && (
               <>
                 <div
@@ -997,15 +1016,6 @@ export default function Tests({ params }: { params: { id: string } }) {
                   ></Image>
                 </div>
               </>
-            )}
-            {isPythonProject && (
-              <button
-                onClick={runPythonFile}
-                className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded flex items-center gap-2"
-              >
-                <FaPlay size={12} />
-                Run
-              </button>
             )}
           </div>
         </div>
@@ -1044,23 +1054,65 @@ export default function Tests({ params }: { params: { id: string } }) {
               />
             </motion.div>
           )}
-          <div
-            className="absolute left-0 right-0 bottom-0 p-6 bg-slate-950 bg-opacity-60 backdrop-blur-md drop-shadow-lg border-t border-slate-700"
-            style={{ display: showTerminal ? "block" : "none" }}
-          >
-            <div ref={terminalRef} className="overflow-hidden"></div>
-            <div
-              className="absolute top-4 right-4 p-2 rounded-md hover:bg-slate-800 border border-transparent hover:border-slate-700 cursor-pointer"
-              onClick={() => {
-                if (showTerminal) {
-                  setShowTerminal(false);
-                } else {
-                  setShowTerminal(true);
-                }
-              }}
-            >
-              <Image src={ExitIcon} alt="" width={10} height={10}></Image>
-            </div>
+          <div className="absolute left-0 right-0 bottom-0 z-30">
+              <div className= {showTerminal ? "h-72 flex flex-col bg-slate-950 bg-opacity-60 backdrop-blur-md border-t border-slate-700 drop-shadow-lg" : "hidden h-72 flex flex-col bg-slate-950 bg-opacity-60 backdrop-blur-md border-t border-slate-700 drop-shadow-lg"}>
+                <div className="flex items-center justify-between p-2 bg-slate-900 border-b border-slate-700">
+                  <div
+                    className="cursor-pointer p-2 hover:bg-slate-800 rounded"
+                    onClick={() => setShowTerminal(!showTerminal)}
+                  >
+                    <Image src={TerminalIcon} alt="Collapse" width={20} height={20} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isPythonProject && (
+                      <button
+                        onClick={runPythonFile}
+                        className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded flex items-center gap-2"
+                      >
+                        <FaPlay size={12} />
+                        Run
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setConfirmSubmit(true)}
+                      className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 rounded flex items-center gap-2"
+                    >
+                      Submit
+              </button>
+                  </div>
+                </div>
+                <div className="relative flex-1">
+                  <div ref={terminalRef} className="absolute p-3 inset-0 w-full h-full overflow-hidden" />
+                </div>
+              </div>
+
+              <div className= {!showTerminal ? "flex items-center justify-between p-2 bg-slate-900 border-t border-slate-700 drop-shadow-lg" : "hidden flex items-center justify-between p-2 bg-transparent border-t border-slate-700 drop-shadow-lg"}>
+                <div
+                  className="cursor-pointer p-2 hover:bg-slate-800 rounded"
+                  onClick={() => setShowTerminal(!showTerminal)}
+                >
+                  <Image src={TerminalIcon} alt="Expand" width={20} height={20} />
+                </div>
+
+                {/* Run button if Python */}
+                <div className="flex items-center gap-2">
+                  {isPythonProject && (
+                    <button
+                      onClick={runPythonFile}
+                      className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded flex items-center gap-2"
+                    >
+                      <FaPlay size={12} />
+                      Run
+                    </button>
+                  )}
+                    <button
+                      onClick={() => setConfirmSubmit(true)}
+                      className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 rounded flex items-center gap-2"
+                    >
+                      Submit
+                    </button>
+                </div>
+              </div>
           </div>
         </div>
       </div>
