@@ -85,7 +85,6 @@ model testID {
   instructions   String    @default("")
   isSample       Boolean   @default(false) // <-- Indicates if it's a sample testID
   company        Company   @relation(fields: [companyID], references: [id], onDelete: Cascade)
-  Job            Job?      @relation(fields: [jobId], references: [id], onDelete: Cascade)
   template       Question? @relation(fields: [templateID], references: [id], onDelete: Cascade)
   job            Job?      @relation(fields: [jobId], references: [id], onDelete: Cascade)
   gradingInsights String?   @default("")
@@ -111,7 +110,6 @@ model Company {
   name      String
   join_code String     @unique
   employees Employee[]
-  Job       Job[]
   questions Question[]
   testIDs   testID[]
   jobs      Job[] 
@@ -124,15 +122,4 @@ model Job {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   applicants testID[] // <--- NEW: each Job can have multiple applicants (testIDs)
-}
-
-model Job {
-  id        String     @id
-  name      String
-  companyId String
-  createdAt DateTime   @default(now())
-  updatedAt DateTime
-  Company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  Question  Question[]
-  testID    testID[]
 }
