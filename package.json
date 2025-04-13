@@ -15,12 +15,13 @@
     "@aws-sdk/s3-request-presigner": "^3.689.0",
     "@google/generative-ai": "^0.21.0",
     "@monaco-editor/react": "^4.6.0",
-    "@prisma/client": "^5.22.0",
+    "@prisma/client": "^6.4.1",
     "@react-email/render": "^1.0.1",
     "@react-pdf-viewer/core": "^3.7.0",
     "@react-pdf-viewer/default-layout": "^3.12.0",
     "@react-pdf/renderer": "^3.3.1",
     "@react-three/fiber": "^8.14.5",
+    "@types/d3": "^7.4.3",
     "@types/node": "20.6.0",
     "@types/papaparse": "^5.3.10",
     "@types/react": "18.2.21",
@@ -28,6 +29,7 @@
     "@webcontainer/api": "^1.5.1-internal.9",
     "autoprefixer": "10.4.15",
     "bcrypt": "^5.1.1",
+    "d3": "^7.9.0",
     "dockerode": "^4.0.0",
     "dotenv": "^16.4.1",
     "eslint": "8.49.0",
@@ -48,6 +50,7 @@
     "react-email": "^2.1.0",
     "react-hot-toast": "^2.4.1",
     "react-icons": "^4.12.0",
+    "react-markdown": "^10.0.0",
     "react-password-checklist": "^1.5.0",
     "resend": "^4.2.0",
     "socket.io-client": "^4.7.2",
@@ -60,6 +63,6 @@
   },
   "devDependencies": {
     "@types/uuid": "^9.0.6",
-    "prisma": "^5.22.0"
+    "prisma": "^6.4.1"
   }
 }

@@ -72,6 +72,7 @@ model testID {
   created        DateTime  @default(now())
   templateID     String?
   expirationDate DateTime?
+  jobId          String?
   id             String    @id @unique @default(cuid())
   email          String
   firstName      String
@@ -81,29 +82,28 @@ model testID {
   submitted      Boolean   @default(false)
   endTime        DateTime?
   startTime      DateTime?
-  jobId          String?
   instructions   String    @default("")
-  isSample       Boolean   @default(false)
+  isSample       Boolean   @default(false) // <-- Indicates if it's a sample testID
   company        Company   @relation(fields: [companyID], references: [id], onDelete: Cascade)
   Job            Job?      @relation(fields: [jobId], references: [id], onDelete: Cascade)
   template       Question? @relation(fields: [templateID], references: [id], onDelete: Cascade)
+  job            Job?      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  gradingInsights String?   @default("")
 }
 
 model Question {
-  id         String   @id @unique @default(cuid())
-  companyID  String
-  title      String
-  language   String
-  framework  String?
-  type       String
-  userId     String
-  expiration String   @default("1 month")
-  prompt     String   @default("")
-  jobId      String?
-  company    Company  @relation(fields: [companyID], references: [id], onDelete: Cascade)
-  Job        Job?     @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  testIDs    testID[]
+  id              String   @id @unique @default(cuid())
+  companyID       String
+  title           String
+  language        String
+  framework       String?
+  type            String
+  userId          String
+  expiration      String   @default("1 month")
+  prompt          String   @default("")
+  company         Company  @relation(fields: [companyID], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  testIDs         testID[]
 }
 
 model Company {
@@ -114,6 +114,16 @@ model Company {
   Job       Job[]
   questions Question[]
   testIDs   testID[]
+  jobs      Job[] 
+}
+model Job {
+  id        String    @id @default(cuid())
+  name      String
+  companyId String
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  applicants testID[] // <--- NEW: each Job can have multiple applicants (testIDs)
 }
 
 model Job {

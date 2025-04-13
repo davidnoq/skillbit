@@ -1,36 +1,40 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useState, useRef, createRef } from "react";
+import { useEffect, useState, createRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Loader from "@/components/loader/loader";
 
 import Nav from "@/components/nav/nav";
+import ReactMarkdown from "react-markdown";
 import Image from "next/image";
 import Arrow from "../../public/assets/icons/arrow.svg";
-import Demo from "../../public/assets/images/demo.png";
-import Logo from "../../public/assets/branding/logos/logo_mini_transparent_white.png";
-import Sidebar from "@/components/sidebar/sidebar";
-import { signOut, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import TopMenuBar from "@/components/topmenubar/topmenubar";
-import Dots from "../../public/assets/icons/dots.svg";
 import Plus from "../../public/assets/icons/plus.svg";
-import { Toaster, toast } from "react-hot-toast";
+import Dots from "../../public/assets/icons/dots.svg";
 import Dropdown from "../../public/assets/icons/dropdown.svg";
-
-// Dashboard icons
-import DashboardIcon from "../../public/assets/icons/dashboard.svg";
-import DashboardIconWhite from "../../public/assets/icons/dashboard_white.svg";
-import ApplicantsIcon from "../../public/assets/icons/applicants.svg";
-import CompanyIcon from "../../public/assets/icons/company.svg";
-import SupportIcon from "../../public/assets/icons/support.svg";
-import WorkshopIcon from "../../public/assets/icons/workshop.svg";
-import ProfileIcon from "../../public/assets/icons/profile.svg";
-import QuestionIcon from "../../public/assets/icons/question.svg";
-import SearchIcon from "../../public/assets/icons/search.svg";
-
 import Edit from "../../public/assets/icons/edit.svg";
+import QuestionIcon from "../../public/assets/icons/question.svg";
+import { assignTemplate } from "../api/database/actions";
+
+interface TestIDInterface {
+  companyID: string;
+  id: string;
+  selected: boolean;
+  created: Date;
+  firstName: string;
+  lastName: string;
+  email: string;
+  status: string;
+  score: string;
+  submitted: boolean;
+  template: Question;
+  expirationDate: Date;
+  instructions: string;
+}
+import Sidebar from "@/components/sidebar/sidebar";
+import { useSession } from "next-auth/react";
+import { Toaster, toast } from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 interface Question {
   title: string;
@@ -42,67 +46,66 @@ interface Question {
   companyID: string;
   userId: string;
   id: string;
+  testIDs: Array<TestIDInterface>;
 }
 
-const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
+interface Job {
+  id: string;
+  name: string;
+}
+
+const QuestionWorkshop = () => {
   const path = usePathname();
   const router = useRouter();
+  const { data: session, status } = useSession();
 
-  const [accountMenuVisible, setAccountMenuVisible] = useState(false);
-  const [newQuestionButton, setNewQuestionButton] = useState(false);
-  const [card, setCard] = useState(1);
   const [email, setEmail] = useState("");
+  const [selectedSample, setSelectedSample] = useState<string | null>(null);
+  const [viewFullInstructions, setViewFullInstructions] = useState(false);
 
   const [userCompanyName, setUserCompanyName] = useState<string | null>(null);
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
   const [userApprovalStatus, setUserApprovalStatus] = useState(false);
   const [companyDataLoaded, setCompanyDataLoaded] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [viewAdditionalSettings, setViewAdditionalSettings] = useState(false);
-  const [expiration, setExpiration] = useState("1 month");
 
-  const [deleteQuestionWarning, setDeleteQuestionWarning] = useState(false);
+  // Jobs for assigning a job to a new question
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [selectedJobId, setSelectedJobId] = useState<string>("");
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<Question>();
+  const [showQuestionOptions, setShowQuestionOptions] = useState("");
+
+  const [deleteQuestionWarning, setDeleteQuestionWarning] = useState(false);
+
+  const [newQuestionButton, setNewQuestionButton] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [title, setTitle] = useState("");
-  const [newTitle, setNewTitle] = useState("");
   const [language, setLanguage] = useState("");
   const [framework, setFramework] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [newPrompt, setNewPrompt] = useState("");
   const [type, setType] = useState("");
-  const [showQuestionOptions, setShowQuestionOptions] = useState("");
+  const [expiration, setExpiration] = useState("1 month");
+  const [viewAdditionalSettings, setViewAdditionalSettings] = useState(false);
+
+  // For updating an existing question
+  const [newTitle, setNewTitle] = useState("");
+  const [newPrompt, setNewPrompt] = useState("");
 
   const questionTitleRef = createRef<HTMLInputElement>();
 
-  const { data: session, status } = useSession();
-
-  // ***** Updated logic for the Dashboard button *****
+  // Logic to decide if we show "Back to Dashboard" button
   const [showDashboardButton, setShowDashboardButton] = useState(false);
 
-  // Whenever the questions array changes, decide if we should show the button
-  useEffect(() => {
-    if (questions.length > 1) {
-      setShowDashboardButton(true);
-    } else {
-      setShowDashboardButton(false);
-    }
-  }, [questions]);
-
-  const handleDashboardButtonClick = () => {
-    router.push("/dashboard");
-  };
-  // ***** End of updated logic for Dashboard Button *****
-
+  // ------------------------------
+  //   1) Fetch Questions from DB
+  // ------------------------------
   const findQuestions = async (company: string) => {
     try {
       const response = await fetch("/api/database", {
         method: "POST",
-        headers: {
-          "Content-type": "application/json",
-        },
+        headers: { "Content-type": "application/json" },
         body: JSON.stringify({
           action: "findQuestions",
           company: company,
@@ -110,22 +113,50 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
       });
       const data = await response.json();
       setQuestions(data.message.reverse());
-      setCurrentQuestion(data.message[0]);
-      setNewTitle(data.message[0]?.title || "");
-      setNewPrompt(data.message[0]?.prompt || "");
+      if (data.message.length > 0) {
+        setCurrentQuestion(data.message[0]);
+        setNewTitle(data.message[0].title || "");
+        setNewPrompt(data.message[0].prompt || "");
+      }
+      return data.message.reverse();
     } catch (error) {
       console.error("Error finding questions: ", error);
+      return null;
     }
   };
 
+  // ------------------------------
+  //   2) Fetch Jobs from DB
+  // ------------------------------
+  const getCompanyJobs = async (companyId: string) => {
+    try {
+      toast.loading("Loading Jobs...");
+      const response = await fetch("/api/database", {
+        method: "POST",
+        headers: { "Content-type": "application/json" },
+        body: JSON.stringify({
+          action: "getCompanyJobs",
+          companyId,
+        }),
+      });
+      toast.remove();
+      const data = await response.json();
+      setJobs(data.message || []);
+    } catch (error) {
+      toast.remove();
+      console.error("Error fetching jobs:", error);
+    }
+  };
+
+  // ------------------------------
+  //   3) Delete & Update
+  // ------------------------------
   const deleteQuestion = async (id: string) => {
     toast.loading("Deleting question...");
     try {
-      const response = await fetch("/api/database", {
+      await fetch("/api/database", {
         method: "POST",
-        headers: {
-          "Content-type": "application/json",
-        },
+        headers: { "Content-type": "application/json" },
         body: JSON.stringify({
           action: "deleteQuestion",
           id: id,
@@ -146,7 +177,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
     setIsSaving(true);
     if (
       currentQuestion &&
-      questions.find((question) => question.title === newTitle) &&
+      questions.find((q) => q.title === newTitle) &&
       newTitle !== currentQuestion.title
     ) {
       toast.remove();
@@ -158,11 +189,9 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
       toast.error("Please enter a title.");
     } else {
       try {
-        const response = await fetch("/api/database", {
+        await fetch("/api/database", {
           method: "POST",
-          headers: {
-            "Content-type": "application/json",
-          },
+          headers: { "Content-type": "application/json" },
           body: JSON.stringify({
             action: "updateQuestion",
             id: id,
@@ -179,15 +208,25 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
     setIsSaving(false);
   };
 
+  // ------------------------------
+  //   4) Add a New Question
+  // ------------------------------
   const addQuestion = async () => {
-    // framework can be ""
-    if (title !== "" && language !== "" && type !== "") {
+    // Check if a job is selected
+    if (!selectedJobId) {
+      toast.remove();
+      toast.error(
+        "A job must be chosen before you can create this template. Please create a job first if you have none."
+      );
+      return;
+    }
+
+    // Basic validation
+    if (title && language && type) {
       try {
         const response = await fetch("/api/database", {
           method: "POST",
-          headers: {
-            "Content-type": "application/json",
-          },
+          headers: { "Content-type": "application/json" },
           body: JSON.stringify({
             action: "addQuestion",
             email: email,
@@ -197,8 +236,10 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
             prompt: prompt,
             type: type,
             expiration: expiration,
+            // jobId: selectedJobId,   <-- If your schema uses jobId on the question model
           }),
         });
+
         const data = await response.json();
         if (data.message === "Success") {
           toast.remove();
@@ -209,12 +250,38 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
           setPrompt("");
           setType("");
           setExpiration("1 month");
+          setSelectedJobId("");
           setViewAdditionalSettings(false);
           setNewQuestionButton(false);
-          await findQuestions(userCompanyId || "");
+
+          // Run all handleAddApplicant calls concurrently
+          const testIDs = await Promise.all([
+            handleAddApplicant(
+              "sample1",
+              "sample1",
+              "skillbitassessment@gmail.com"
+            ),
+            handleAddApplicant(
+              "sample2",
+              "sample2",
+              "skillbitassessment@gmail.com"
+            ),
+            handleAddApplicant(
+              "sample3",
+              "sample3",
+              "skillbitassessment@gmail.com"
+            ),
+          ]);
+
+          // Ensure findQuestions completes before handleAssignTemplate
+          const current = await findQuestions(userCompanyId || "");
+          await handleAssignTemplate(current[current.length - 1], testIDs);
+
+          // Fetch files only after all above operations are completed
+          fetchFilesFromS3(testIDs);
         } else if (
           data.message ===
-          "Title already exists. Please choose a unique template title."
+          "Title already exists. Please choose a unique question title."
         ) {
           toast.remove();
           toast.error(data.message);
@@ -225,29 +292,148 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
       }
     } else {
       toast.remove();
-      if (title === "") {
-        toast.error("Please choose a title.");
-      }
-      if (language === "") {
-        toast.error("Please choose a language and framework.");
-      }
-      if (type === "") {
-        toast.error("Please choose a type.");
-      }
+      if (!title) toast.error("Please choose a title.");
+      if (!language) toast.error("Please choose a language and framework.");
+      if (!type) toast.error("Please choose a type.");
     }
   };
 
+  const fetchFilesFromS3 = async (testIDs: Array<any>) => {
+    try {
+      await Promise.all(
+        testIDs.map(async (testID) => {
+          const response = await fetch("/api/getFilesFromS3", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ testId: testID.message, recruiter: false }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch files for testID: ${testID}`);
+          }
+
+          const data = await response.json();
+          return data;
+        })
+      );
+      await findQuestions(userCompanyId || "");
+    } catch (error) {
+      console.error("Error fetching files from S3:", error);
+      toast.error("Failed to load files from S3!");
+    }
+  };
+
+  async function handleAddApplicant(
+    applicantFirstName: string,
+    applicantLastName: string,
+    applicantEmail: string
+  ) {
+    try {
+      const response = await fetch("/api/database", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "addApplicant",
+          firstName: applicantFirstName,
+          lastName: applicantLastName,
+          email: applicantEmail,
+          recruiterEmail: email,
+          isSample: true,
+        }),
+      });
+
+      const testID = await response.json();
+      return testID;
+    } catch (error) {
+      toast.remove();
+      toast.error("Error adding applicant");
+      return null;
+    }
+  }
+
+  // Fetch Applicants from DB
+  const getApplicants = async (companyId: string) => {
+    try {
+      const response = await fetch("/api/database", {
+        method: "POST",
+        headers: {
+          "Content-type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "getApplicants",
+          company: companyId,
+          isSample: true,
+        }),
+      });
+      const data = await response.json();
+      data.message.forEach((applicant: TestIDInterface) => {
+        applicant.selected = true;
+      });
+
+      // Sort by created date
+      data.message.sort((a: TestIDInterface, b: TestIDInterface) => {
+        const dateA = new Date(a.created);
+        const dateB = new Date(b.created);
+        return dateA.getTime() - dateB.getTime();
+      });
+      return data.message;
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleAssignTemplate = async (
+    current: Question,
+    testIDs: Array<TestIDInterface>
+  ) => {
+    try {
+      console.log("trying applicant data:");
+      console.log(testIDs);
+      console.log("CURRENT:", current);
+      toast.loading("Loading...");
+      const response = await fetch("/api/database", {
+        method: "POST",
+        headers: {
+          "Content-type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "assignSampleTemplate",
+          applicantData: testIDs,
+          template: current.id,
+        }),
+      });
+      const data = await response.json();
+      toast.remove();
+
+      if (data.message === "Success") {
+        toast.success("Successfully set templates and sent tests.");
+      } else {
+        console.log(data);
+        toast.error("An error occurred while setting templates.");
+      }
+    } catch (error) {
+      console.error("Error setting templates: ", error);
+    }
+  };
+
+  // ------------------------------
+  //   5) useEffect to load data
+  // ------------------------------
   useEffect(() => {
     const getData = async () => {
       if (session) {
         toast.remove();
         toast.loading("Looking for questions...");
+
         setEmail(session.user?.email || "");
+        // 1) Find user by email
         const userResponse = await fetch("/api/database", {
           method: "POST",
-          headers: {
-            "Content-type": "application/json",
-          },
+          headers: { "Content-type": "application/json" },
           body: JSON.stringify({
             action: "findUserByEmail",
             email: session.user?.email,
@@ -255,6 +441,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
         });
         const userData = await userResponse.json();
 
+        // 2) If user is in a company
         if (
           userData.message.employee &&
           userData.message.employee.company.name &&
@@ -264,7 +451,10 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
           setUserCompanyName(userData.message.employee.company.name);
           setUserCompanyId(userData.message.employee.company.id);
           setUserApprovalStatus(userData.message.employee.isApproved);
+
           await findQuestions(userData.message.employee.company.id);
+          // Also fetch jobs for the new "must pick a job" requirement
+          await getCompanyJobs(userData.message.employee.company.id);
         }
         setCompanyDataLoaded(true);
         toast.remove();
@@ -275,47 +465,48 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
     }
   }, [session, status]);
 
+  // Update whether to show dashboard button
+  useEffect(() => {
+    if (questions.length > 1) setShowDashboardButton(true);
+    else setShowDashboardButton(false);
+  }, [questions]);
+
+  // ------------------------------
+  //  Rendering & Conditions
+  // ------------------------------
   if (status === "loading") {
-    return <Loader></Loader>;
+    return <Loader />;
   }
   if (status === "unauthenticated") {
     router.push("/auth");
-    return;
+    return null;
   }
+
+  const handleDashboardButtonClick = () => {
+    router.push("/dashboard");
+  };
 
   return (
     <>
-      <Toaster position="top-right"></Toaster>
+      <Toaster position="top-right" />
       <div className="flex text-white overflow-x-hidden min-h-screen">
         <Sidebar />
         <div className="flex-1 bg-slate-950">
-          {/* Enhanced Info Section */}
-          <div className="p-6 flex flex-col gap-6  mx-auto w-full">
-            <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 items-center justify-between flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 mb-3">
-              {/* Left Section: Icon and Text */}
-
-              {/* Left Section: Info */}
-              <div className="flex items-center gap-3">
-                <Image
-                  src={QuestionIcon}
-                  width={32}
-                  height={32}
-                  alt="Info Icon"
-                />
-                <div>
-                  <h2 className="text-lg font-semibold text-white">
-                    What is this Assessment Builder?
-                  </h2>
-                  <p className="text-sm text-slate-400">
-                    This is your tool for building customized question
-                    templates, tailored by AI to suit specific needs and
-                    preferences.
-                  </p>
+          {/* Info Section */}
+          <div className="p-6 pb-0 flex flex-col gap-6 mx-auto w-full">
+            {questions.length < 1 && (
+              <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 items-center justify-between flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
+                <div className="flex items-end gap-3">
+                  <Image src={QuestionIcon} width={32} height={32} alt="Icon" />
+                  <div>
+                    <h2 className="text-lg font-semibold text-white">
+                      Assessment Builder
+                    </h2>
+                    <p className="text-sm text-slate-400">
+                      Build customized question templates for your candidates!
+                    </p>
+                  </div>
                 </div>
-              </div>
-
-              {/* Right Section: Button */}
-              {questions.length > 0 && (
                 <motion.button
                   className="bg-indigo-600 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors duration-200 animate-glow"
                   whileHover={{ scale: 1.05 }}
@@ -324,12 +515,11 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                 >
                   <span className="text-white">Back to Dashboard</span>
                 </motion.button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-          {/* End of Enhanced Info Section */}
 
-          {/* Dashboard content */}
+          {/* If still loading company info */}
           {!companyDataLoaded && (
             <div className="flex justify-center items-center scale-150 mt-6">
               <div className="lds-ring">
@@ -340,6 +530,8 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
               </div>
             </div>
           )}
+
+          {/* If user has a company & is approved */}
           {companyDataLoaded && userApprovalStatus && (
             <div className="p-6">
               <div className="flex flex-col lg:flex-row gap-6">
@@ -356,13 +548,14 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                         setFramework("");
                         setPrompt("");
                         setType("");
+                        setSelectedJobId("");
                       }}
                       aria-label="Add New Template"
                     >
                       <Image src={Plus} width={14} height={14} alt="Add" />
                     </button>
                   </div>
-                  <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto">
+                  <div className="flex flex-col gap-3 max-h-[60vh] ">
                     {questions && questions.length > 0 ? (
                       questions.map((question) => (
                         <div className="relative" key={question.id}>
@@ -394,6 +587,8 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                               }}
                             />
                           </div>
+
+                          {/* question options dropdown */}
                           {showQuestionOptions === question.id && (
                             <motion.div
                               className="flex flex-col bg-slate-800 border border-slate-700 rounded-lg absolute z-20 right-0 mt-1 w-32"
@@ -417,6 +612,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setDeleteQuestionWarning(true);
+                                  setCurrentQuestion(question);
                                 }}
                               >
                                 <p>Delete</p>
@@ -432,15 +628,15 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                     )}
                   </div>
                 </div>
-                {/* End of Templates List */}
 
                 {/* Question Details */}
                 <div className="rounded-xl bg-slate-900 border border-slate-800 p-6 w-full lg:w-2/3">
                   <div className="min-h-[60vh]">
                     {currentQuestion ? (
                       <div className="flex flex-col justify-between h-full">
-                        {/* Question Header */}
+                        {/* Header */}
                         <div>
+                          {/* Edit Title */}
                           <div className="flex items-end gap-2">
                             <input
                               className="border-b border-slate-800 bg-transparent outline-none placeholder:text-white font-bold text-2xl w-full"
@@ -457,6 +653,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                               height={14}
                             />
                           </div>
+                          {/* Language & Type */}
                           <div className="flex flex-wrap gap-3 mt-3">
                             <span className="px-2 py-1 rounded-lg border border-slate-700 bg-slate-800">
                               {currentQuestion.language}
@@ -470,14 +667,15 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                               {currentQuestion.type}
                             </span>
                           </div>
+
+                          {/* Prompt */}
                           <div className="mt-3">
                             <h2 className="text-lg font-semibold">
                               Template Prompt
                             </h2>
                             <p className="text-sm text-slate-400">
-                              This open-ended prompt is being used to help
-                              generate your templates. Candidates will not see
-                              this.
+                              This open-ended prompt is used to generate your
+                              template. Candidates will not see this.
                             </p>
                             <textarea
                               placeholder="Generate a todo list application with 5 errors..."
@@ -486,6 +684,8 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                               value={newPrompt}
                             />
                           </div>
+
+                          {/* Expiration */}
                           <div className="mt-3 flex items-center gap-2">
                             <h2 className="text-lg font-semibold">
                               Expiration:
@@ -494,10 +694,176 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                               {currentQuestion.expiration}
                             </span>
                           </div>
-                        </div>
-                        {/* End of Question Header */}
+                          <div className="mt-3 flex flex-col gap-2">
+                            <h2 className="text-lg font-semibold">Samples:</h2>
+                            {currentQuestion.testIDs.length == 0 && (
+                              <div className="flex gap-3 items-center">
+                                <div className="flex">
+                                  <div className="lds-ring">
+                                    <div></div>
+                                    <div></div>
+                                    <div></div>
+                                    <div></div>
+                                  </div>
+                                </div>
+                                <motion.p
+                                  initial={{ opacity: 1 }}
+                                  animate={{ opacity: [1, 0.4, 1] }}
+                                  transition={{
+                                    repeat: Infinity,
+                                    duration: 1,
+                                    ease: "linear",
+                                  }}
+                                >
+                                  Generating samples...
+                                </motion.p>
+                              </div>
+                            )}
+                            {currentQuestion.testIDs.length > 0 && (
+                              <div className="flex flex-col gap-3">
+                                {currentQuestion.testIDs.map(
+                                  (sample, index) => (
+                                    <div
+                                      key={sample.id}
+                                      className="bg-slate-800 border border-slate-700 p-3 rounded-xl"
+                                    >
+                                      <h2>Sample {index + 1}</h2>
+                                      <p className="text-slate-400">
+                                        <ReactMarkdown>
+                                          {sample.instructions.length > 200
+                                            ? sample.instructions.slice(
+                                                0,
+                                                200
+                                              ) + "..."
+                                            : sample.instructions}
+                                        </ReactMarkdown>
+                                      </p>
+                                      <div className="flex gap-2">
+                                        <motion.button
+                                          className="mt-2 flex justify-center items-center p-1 px-3 rounded-full shadow-lg cursor-pointer duration-100 text-sm w-fit bg-slate-700 border border-slate-600 hover:bg-slate-600"
+                                          onClick={() => {
+                                            setSelectedSample(
+                                              sample.instructions
+                                            );
+                                          }}
+                                        >
+                                          <>View Instructions</>
+                                        </motion.button>
+                                        <motion.button
+                                          className="mt-2 flex justify-center items-center p-1 px-3 bg-indigo-600 rounded-full shadow-lg cursor-pointer duration-100 text-sm w-fit"
+                                          onClick={() =>
+                                            window.open(
+                                              `/tests/${sample.id}`,
+                                              "_blank",
+                                              "width=1500,height=800,scrollbars=no,resizable=no"
+                                            )
+                                          }
+                                        >
+                                          <>
+                                            View In Candidate Portal
+                                            <div className="arrow flex items-center justify-center ml-2">
+                                              <div className="arrowMiddle" />
+                                              <Image
+                                                src={Arrow}
+                                                alt=""
+                                                width={14}
+                                                height={14}
+                                                className="arrowSide"
+                                              />
+                                            </div>
+                                          </>
+                                        </motion.button>
+                                      </div>
+                                    </div>
+                                    // <div
+                                    //   key={sample.id} // Ensure each sample has a unique key
+                                    //   className="bg-slate-800 border border-slate-700 py-1 px-2 rounded-xl"
+                                    // onClick={() => {
+                                    //   setSelectedSample(sample.instructions); // Store selected sample's instructions
+                                    // }}
+                                    // >
+                                    //   <p>
+                                    // <ReactMarkdown>
+                                    //   {sample.instructions.length > 200
+                                    //     ? sample.instructions.slice(0, 200) +
+                                    //       "..."
+                                    //     : sample.instructions}
+                                    // </ReactMarkdown>
+                                    //   </p>
+                                    // </div>
+                                  )
+                                )}
 
-                        {/* Save Changes Button */}
+                                {/* Modal */}
+                                <AnimatePresence>
+                                  {selectedSample && (
+                                    <motion.div
+                                      className="fixed inset-0 z-50 flex justify-center items-center bg-slate-950 bg-opacity-60 p-6 backdrop-blur-sm"
+                                      initial={{ opacity: 0 }}
+                                      animate={{ opacity: 1 }}
+                                      exit={{ opacity: 0 }}
+                                    >
+                                      <motion.div
+                                        className="absolute m-auto z-50 left-6 right-6 top-6 bottom-6 flex flex-col max-w-4xl bg-slate-900 border border-slate-800 rounded-xl p-6 overflow-y-auto"
+                                        style={{
+                                          scrollbarWidth: "thin",
+                                          scrollbarColor:
+                                            "rgb(51 65 85) transparent",
+                                        }}
+                                        initial={{ opacity: 0, y: 30 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 30 }}
+                                        transition={{
+                                          duration: 0.5,
+                                          ease: "backOut",
+                                        }}
+                                      >
+                                        <div className="flex justify-end">
+                                          <motion.button
+                                            className="bg-slate-900 border border-slate-800 p-2 rounded-full flex justify-center items-center"
+                                            onClick={() =>
+                                              setSelectedSample(null)
+                                            } // Close modal by clearing state
+                                            initial={{ opacity: 0, y: 30 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: 30 }}
+                                            transition={{
+                                              duration: 0.7,
+                                              ease: "backOut",
+                                            }}
+                                            aria-label="Close Modal"
+                                          >
+                                            <Image
+                                              src={Plus}
+                                              width={14}
+                                              height={14}
+                                              className="rotate-45"
+                                              alt="Close"
+                                            />
+                                          </motion.button>
+                                        </div>
+                                        <div className="flex flex-col gap-6">
+                                          <div className="flex flex-col">
+                                            <h1 className="text-2xl font-semibold">
+                                              Instructions
+                                            </h1>
+                                            <p className="text-slate-400 mt-6">
+                                              <ReactMarkdown>
+                                                {selectedSample}
+                                              </ReactMarkdown>
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </motion.div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Save Button */}
                         <AnimatePresence>
                           {(currentQuestion.title !== newTitle ||
                             currentQuestion.prompt !== newPrompt) && (
@@ -522,9 +888,9 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                             </motion.button>
                           )}
                         </AnimatePresence>
-                        {/* End of Save Changes Button */}
                       </div>
                     ) : (
+                      // If no questions exist or none selected
                       <div className="flex justify-center items-center flex-col text-center min-h-[60vh]">
                         <h1 className="text-2xl font-semibold mb-2">
                           Welcome to the Assessment Builder!
@@ -543,10 +909,11 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                     )}
                   </div>
                 </div>
-                {/* End of Question Details */}
               </div>
             </div>
           )}
+
+          {/* If user has a company but not approved */}
           {companyDataLoaded && !userApprovalStatus && (
             <div className="p-6 flex justify-center items-center flex-col w-full text-center">
               <div className="bg-gradient-to-b from-indigo-600 to-transparent w-full rounded-xl p-6 py-20 mb-20"></div>
@@ -593,7 +960,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                 exit={{ opacity: 0 }}
               >
                 <motion.div
-                  className="flex flex-col gap-12 max-w-4xl w-full bg-slate-900 border border-slate-800 rounded-xl p-6 overflow-y-auto"
+                  className="absolute m-auto left-6 right-6 top-6 bottom-6 flex flex-col max-w-4xl bg-slate-900 border border-slate-800 rounded-xl p-6 overflow-y-auto"
                   style={{
                     scrollbarWidth: "thin",
                     scrollbarColor: "rgb(51 65 85) transparent",
@@ -603,6 +970,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                   exit={{ opacity: 0, y: 30 }}
                   transition={{ duration: 0.5, ease: "backOut" }}
                 >
+                  {/* Close Modal */}
                   <div className="flex justify-end">
                     <motion.button
                       className="bg-slate-900 border border-slate-800 p-2 rounded-full flex justify-center items-center"
@@ -625,6 +993,8 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                       />
                     </motion.button>
                   </div>
+
+                  {/* Modal Content */}
                   <div className="flex flex-col gap-6">
                     <div className="flex flex-col">
                       <h1 className="text-2xl font-semibold">
@@ -636,6 +1006,8 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                         candidate skills.
                       </p>
                     </div>
+
+                    {/* (A) Template Title */}
                     <div className="flex flex-col">
                       <h2 className="text-lg font-semibold">Assessment Name</h2>
                       <p className="text-slate-400">
@@ -649,13 +1021,15 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                         value={title}
                       />
                     </div>
+
+                    {/* (B) Language & Framework */}
                     <div className="flex flex-col">
                       <h2 className="text-lg font-semibold">
                         Programming Language and Framework
                       </h2>
                       <p className="text-slate-400">
-                        Your questions will test candidates using the
-                        programming language or framework you choose.
+                        Your questions will test candidates using the language
+                        or framework you choose.
                       </p>
                       <div className="flex flex-wrap gap-3 mt-3">
                         <div
@@ -701,11 +1075,12 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                         </div>
                       </div>
                     </div>
+
+                    {/* (C) Question Type */}
                     <div className="flex flex-col">
                       <h2 className="text-lg font-semibold">Question Type</h2>
                       <p className="text-slate-400">
-                        We will use this to help generate your template and give
-                        candidates an idea of what to expect.
+                        We use this to help generate your template.
                       </p>
                       <div className="flex flex-wrap gap-3 mt-3">
                         <div
@@ -760,11 +1135,13 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                         </div>
                       </div>
                     </div>
+
+                    {/* (D) Template Prompt */}
                     <div className="flex flex-col">
                       <h2 className="text-lg font-semibold">Template Prompt</h2>
                       <p className="text-slate-400">
-                        We will use this open-ended prompt to help generate your
-                        template. Candidates will not see this.
+                        This is used to help generate your template. Candidates
+                        won’t see this.
                       </p>
                       <textarea
                         placeholder="Generate a todo list application with 5 errors..."
@@ -773,6 +1150,8 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                         value={prompt}
                       />
                     </div>
+
+                    {/* (E) Additional Settings */}
                     <div className="flex flex-col">
                       <div
                         className="flex justify-between items-center cursor-pointer"
@@ -825,16 +1204,48 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                         </motion.div>
                       )}
                     </div>
+
+                    {/* (F) Must Choose a Job */}
+                    <div className="flex flex-col">
+                      <h2 className="text-lg font-semibold">Assign to a Job</h2>
+                      <p className="text-slate-400">
+                        A job must be chosen before creating this template. If
+                        you have no jobs, create one first.
+                      </p>
+                      {jobs && jobs.length > 0 ? (
+                        <select
+                          className="mt-3 bg-slate-800 border border-slate-700 rounded-xl px-2 py-1 outline-none"
+                          value={selectedJobId}
+                          onChange={(e) => setSelectedJobId(e.target.value)}
+                        >
+                          <option value="">Choose a job...</option>
+                          {jobs.map((j) => (
+                            <option key={j.id} value={j.id}>
+                              {j.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p className="text-red-400 mt-3">
+                          No jobs found. Please create a job in Company Profile
+                          first.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* (G) Create Assessment */}
                     <motion.button
                       className="bg-indigo-600 px-6 py-3 rounded-lg flex justify-center items-center hover:bg-indigo-700 transition-colors duration-200"
                       initial={{ opacity: 0, y: 30 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.5, ease: "backOut" }}
                       onClick={addQuestion}
+                      // disable button if no jobs
+                      disabled={jobs.length === 0}
                     >
                       Create Assessment
                       <div className="flex items-center justify-center ml-2">
-                        <div className="arrowMiddle"></div>
+                        <div className="arrowMiddle" />
                         <Image
                           src={Arrow}
                           alt="Arrow"
@@ -859,6 +1270,7 @@ const QuestionWorkshop = ({ params }: { params: { id: string } }) => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                transition={{ duration: 0.5, ease: "backOut" }}
               >
                 <motion.div
                   className="bg-slate-900 p-6 rounded-xl border border-slate-800 w-full max-w-md"

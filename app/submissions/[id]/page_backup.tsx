@@ -4,7 +4,6 @@
 
 "use client";
 
-import ReactMarkdown from "react-markdown";
 import Editor, { loader } from "@monaco-editor/react";
 import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { io } from "socket.io-client";
@@ -24,7 +23,6 @@ import DropdownIcon from "../../../public/assets/icons/dropdown.svg";
 import SearchIcon from "../../../public/assets/icons/search.svg";
 import ExitIcon from "../../../public/assets/icons/exit.svg";
 import Arrow from "../../../public/assets/icons/arrow.svg";
-import Plus from "../../../public/assets/icons/plus.svg";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { files as initialFiles } from "./files";
@@ -67,7 +65,7 @@ function useDebouncedEffect(callback, dependencies, delay) {
   }, [...dependencies, delay]);
 }
 
-export default function Tests({ params }: { params: { id: string } }) {
+export default function Submissions({ params }: { params: { id: string } }) {
   const [fileName, setFileName] = useState("");
   const terminalRef = useRef(null);
   const termRef = useRef(null);
@@ -88,10 +86,6 @@ export default function Tests({ params }: { params: { id: string } }) {
   const file = filesState[fileName];
   const shellWriterRef = useRef(null);
   const [isPythonProject, setIsPythonProject] = useState(false);
-  const [instructions, setInstructions] = useState("");
-  const [viewFullInstructions, setViewFullInstructions] = useState(false);
-  const [isSample, setIsSample] = useState(false);
-  const [confirmSubmit, setConfirmSubmit] = useState(false);
 
   const fetchFilesFromS3 = async () => {
     try {
@@ -145,50 +139,6 @@ export default function Tests({ params }: { params: { id: string } }) {
         };
       }
 
-      try {
-        const response = await fetch("/api/database", {
-          method: "POST",
-          headers: {
-            "Content-type": "application/json",
-          },
-          body: JSON.stringify({
-            action: "getInstructions",
-            id: params.id,
-          }),
-        });
-        const data = await response.json();
-        console.log(data);
-        setInstructions(data.message.instructions);
-        if (!response.ok) {
-          throw new Error("Failed to load instructions from db");
-        }
-      } catch (error) {
-        console.error("Error fetching instructions:", error);
-        toast.error("Failed to load instructions from db");
-      }
-
-      try {
-        const response = await fetch("/api/database", {
-          method: "POST",
-          headers: {
-            "Content-type": "application/json",
-          },
-          body: JSON.stringify({
-            action: "getIsSample",
-            id: params.id,
-          }),
-        });
-        const data = await response.json();
-        console.log(data);
-        setIsSample(data.message.isSample);
-        if (!response.ok) {
-          throw new Error("Failed to load isSample from db");
-        }
-      } catch (error) {
-        console.error("Error fetching isSample:", error);
-        toast.error("Failed to load isSample from db");
-      }
-
       setIsPythonProject(hasPythonFiles);
       setFilesState(formattedFiles);
       setFileName(firstFilename);
@@ -222,42 +172,6 @@ export default function Tests({ params }: { params: { id: string } }) {
         console.log("No test data found, redirecting to /not-found");
         router.push("/not-found");
         return;
-      }
-
-      // Handle time setup
-      if (!testData.message.startTime) {
-        console.log("No start time, initializing test timer");
-        const startResponse = await fetch("/api/database", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            action: "startTest",
-            testId: params.id,
-          }),
-        });
-        const startData = await startResponse.json();
-        console.log("Start test response:", startData);
-
-        if (!isSample) {
-          const endTime = new Date(startData.message.endTime);
-          const currentTime = new Date();
-          const remainingTime = Math.floor(
-            (endTime.getTime() - currentTime.getTime()) / 1000
-          );
-          setTimeLeft(remainingTime);
-        }
-      } else {
-        console.log("Test already started, calculating remaining time");
-        if (!isSample) {
-          const endTime = new Date(testData.message.endTime);
-          const currentTime = new Date();
-          const remainingTime = Math.floor(
-            (endTime.getTime() - currentTime.getTime()) / 1000
-          );
-          setTimeLeft(remainingTime);
-        }
       }
 
       try {
@@ -457,26 +371,6 @@ export default function Tests({ params }: { params: { id: string } }) {
     }
   };
 
-  // Countdown timer effect
-  useEffect(() => {
-    if (timeLeft === null) return; // Do not do anything if timeLeft is not set
-    if (timeLeft <= 0) {
-      handleSubmit();
-      return;
-    }
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [timeLeft]);
-
   useDebouncedEffect(
     () => {
       uploadToS3();
@@ -493,15 +387,9 @@ export default function Tests({ params }: { params: { id: string } }) {
       );
       const submitted = await getIsSubmitted();
       console.log("Test submitted status:", submitted);
-      if (submitted) {
-        router.push("/submission_screen");
-        return;
-      }
 
-      const expired = await getIsExpired();
-      console.log("Test expired status:", expired);
-      if (expired) {
-        router.push("/testExpired");
+      if (!submitted) {
+        router.push("/404");
         return;
       }
 
@@ -609,37 +497,6 @@ export default function Tests({ params }: { params: { id: string } }) {
     }
   };
 
-  const markSubmitted = async () => {
-    try {
-      const response = await fetch("/api/database", {
-        method: "POST",
-        headers: {
-          "Content-type": "application/json",
-        },
-        body: JSON.stringify({
-          action: "markSubmitted",
-          id: params.id,
-        }),
-      });
-      // const data = await response.json();
-      if (!response.ok) {
-        throw new Error("Failed to mark testID as submitted.");
-      }
-    } catch (error) {
-      console.error(error);
-      throw new Error("Failed to mark testID as submitted.");
-    }
-  };
-
-  // Handle submit button click
-  const handleSubmit = async () => {
-    toast.loading("Submitting...");
-    await uploadToS3();
-    await markSubmitted();
-    await deleteContainer();
-    router.push("/submission_screen");
-  };
-
   const getIsSubmitted = async () => {
     try {
       const response = await fetch("/api/database", {
@@ -660,29 +517,6 @@ export default function Tests({ params }: { params: { id: string } }) {
     } catch (error) {
       console.error(error);
       throw new Error("Failed to get testID submitted.");
-    }
-  };
-
-  const getIsExpired = async () => {
-    try {
-      const response = await fetch("/api/database", {
-        method: "POST",
-        headers: {
-          "Content-type": "application/json",
-        },
-        body: JSON.stringify({
-          action: "getIsExpired",
-          id: params.id,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error("Failed to get testID expired.");
-      }
-      return data.message;
-    } catch (error) {
-      console.error(error);
-      throw new Error("Failed to get testID expired.");
     }
   };
 
@@ -726,16 +560,6 @@ export default function Tests({ params }: { params: { id: string } }) {
         }}
       />
 
-      {!isLoading && timeLeft !== null && (
-        <div
-          className={`absolute top-3 right-2 text-xl ${
-            timeLeft <= 300 ? "text-red-500" : "text-white"
-          } bg-black bg-opacity-50 px-3 py-2 rounded-md`}
-        >
-          Time Left: {formatTime(timeLeft)}
-        </div>
-      )}
-
       {isLoading && (
         <div className="fixed left-0 right-0 top-0 bottom-0 z-50">
           <div className="graphPaper bg-slate-900 text-white h-screen w-screen flex items-center justify-center flex-col">
@@ -770,152 +594,20 @@ export default function Tests({ params }: { params: { id: string } }) {
           >
             <div className="fixed bg-slate-900 border-slate-700 border-r w-72 p-3 flex flex-col justify-between h-screen">
               <div className="flex flex-col justify-between">
-                {/* <div className="flex-1 max-w-xl bg-white bg-opacity-5 p-2 rounded-lg flex justify-between border border-slate-700 mb-3">
-                <input
-                  className="text-white bg-transparent focus:outline-none w-full placeholder:text-white"
-                  placeholder="Search..."
-                ></input>
-                <Image src={SearchIcon} alt="" width={25} height={25}></Image>
-              </div> */}
                 <ul className="list-none text-white flex flex-col gap-1 bg-slate-800 border-slate-700 border p-3 rounded-lg">
                   <div className="flex justify-between items-center">
                     <p className="text-base">Project Information</p>
-                    {/* <Image
-                    src={DropdownIcon}
-                    alt=""
-                    width={14}
-                    height={14}
-                  ></Image> */}
                   </div>
                   <hr className="border-t-0 border-b border-b-slate-700 mb-1" />
-                  {/* <h1 className="text-sm">Instructions:</h1> */}
+                  <h1 className="text-sm">Prompt:</h1>
                   <p className="text-sm">
-                    <ReactMarkdown>
-                      {instructions.length > 300
-                        ? instructions.slice(0, 300) + "..."
-                        : instructions}
-                    </ReactMarkdown>
+                    You are tasked with building a simple To-Do list application
+                    in React. The application should allow users to add and
+                    remove tasks from their to-do list...
                   </p>
-                  <Link
-                    href=""
-                    className="text-sm"
-                    onClick={() => setViewFullInstructions(true)}
-                  >
+                  <Link href="" className="text-sm">
                     See more
                   </Link>
-                  {/* New Question Modal */}
-                  <AnimatePresence>
-                    {viewFullInstructions && (
-                      <motion.div
-                        className="fixed inset-0 z-50 flex justify-center items-center bg-slate-950 bg-opacity-60 p-6 backdrop-blur-sm"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                      >
-                        <motion.div
-                          className="absolute m-auto z-50 left-6 right-6 top-6 bottom-6 flex flex-col max-w-4xl bg-slate-900 border border-slate-800 rounded-xl p-6 overflow-y-auto"
-                          style={{
-                            scrollbarWidth: "thin",
-                            scrollbarColor: "rgb(51 65 85) transparent",
-                          }}
-                          initial={{ opacity: 0, y: 30 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 30 }}
-                          transition={{ duration: 0.5, ease: "backOut" }}
-                        >
-                          <div className="flex justify-end">
-                            <motion.button
-                              className="bg-slate-900 border border-slate-800 p-2 rounded-full flex justify-center items-center"
-                              onClick={() => {
-                                setViewFullInstructions(false);
-                              }}
-                              initial={{ opacity: 0, y: 30 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: 30 }}
-                              transition={{ duration: 0.7, ease: "backOut" }}
-                              aria-label="Close Modal"
-                            >
-                              <Image
-                                src={Plus}
-                                width={14}
-                                height={14}
-                                className="rotate-45"
-                                alt="Close"
-                              />
-                            </motion.button>
-                          </div>
-                          <div className="flex flex-col gap-6">
-                            <div className="flex flex-col">
-                              <h1 className="text-2xl font-semibold">
-                                Instructions
-                              </h1>
-                              <p className="text-slate-400 mt-6">
-                                <ReactMarkdown>{instructions}</ReactMarkdown>
-                              </p>
-                            </div>
-                          </div>
-                        </motion.div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  <AnimatePresence>
-                  {confirmSubmit && (
-                    <motion.div
-                      className="fixed inset-0 z-50 flex justify-center items-center
-                                bg-slate-950 bg-opacity-60 p-6 backdrop-blur-sm"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.5, ease: 'backOut' }}
-                    >
-                      <motion.div
-                        className="bg-slate-900 p-6 rounded-xl border border-slate-800
-                                  w-full max-w-md"
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 30 }}
-                        transition={{ duration: 0.5, ease: 'backOut' }}
-                      >
-                        <h1 className="text-xl font-semibold mb-4">Submit your work?</h1>
-                        <p className="mb-6">
-                          Once you confirm, the project will be uploaded and you won’t be able
-                          to make further changes.
-                        </p>
-
-                        <div className="flex flex-col gap-3">
-                          {/* CONFIRM */}
-                          <motion.button
-                            className="w-full bg-slate-800 border border-slate-700 px-6 py-3
-                                      rounded-lg flex justify-center items-center
-                                      transition-colors duration-200"
-                            initial={{ opacity: 0, y: 30 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 30 }}
-                            onClick={async () => {
-                              setConfirmSubmit(false);   // close modal
-                              await handleSubmit();      // run your existing submit logic
-                            }}
-                          >
-                            Yes, submit
-                          </motion.button>
-
-                          {/* CANCEL */}
-                          <motion.button
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 px-6 py-3
-                                      rounded-lg flex justify-center items-center
-                                      hover:bg-slate-700 transition-colors duration-200"
-                            initial={{ opacity: 0, y: 30 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 30 }}
-                            onClick={() => setConfirmSubmit(false)}
-                          >
-                            Cancel
-                          </motion.button>
-                        </div>
-                      </motion.div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
                 </ul>
                 <ul className="list-none text-white flex flex-col gap-1 bg-slate-800 border-slate-700 border p-3 rounded-lg mt-3">
                   <div className="flex justify-between items-center">
@@ -958,6 +650,7 @@ export default function Tests({ params }: { params: { id: string } }) {
                   </ul>
                 </ul>
               </div>
+              <div className="flex flex-col justify-between"></div>
             </div>
           </motion.div>
         )}
@@ -987,6 +680,21 @@ export default function Tests({ params }: { params: { id: string } }) {
             <h1 className="text-white text-2xl">Skillbit</h1>
           </div>
           <div className="flex-1 flex justify-end items-center gap-2">
+            <div
+              className="flex p-2 rounded-md hover:bg-slate-800 border border-transparent hover:border-slate-700 cursor-pointer"
+              style={{
+                backgroundColor: showTerminal ? "#1e293b" : "",
+                border: showTerminal ? "1px solid #334155" : "",
+              }}
+              onClick={() => setShowTerminal(!showTerminal)}
+            >
+              <Image
+                src={TerminalIcon}
+                alt="Terminal"
+                width={20}
+                height={20}
+              ></Image>
+            </div>
             {!isPythonProject && (
               <>
                 <div
@@ -1017,6 +725,15 @@ export default function Tests({ params }: { params: { id: string } }) {
                 </div>
               </>
             )}
+            {isPythonProject && (
+              <button
+                onClick={runPythonFile}
+                className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded flex items-center gap-2"
+              >
+                <FaPlay size={12} />
+                Run
+              </button>
+            )}
           </div>
         </div>
         <div className="h-full flex relative">
@@ -1024,6 +741,7 @@ export default function Tests({ params }: { params: { id: string } }) {
             {file && (
               <Editor
                 theme="myTheme"
+                options={{ readOnly: true }}
                 path={`src/${file.name}`}
                 defaultLanguage={
                   file.language ||
@@ -1054,65 +772,23 @@ export default function Tests({ params }: { params: { id: string } }) {
               />
             </motion.div>
           )}
-          <div className="absolute left-0 right-0 bottom-0 z-30">
-              <div className= {showTerminal ? "h-72 flex flex-col bg-slate-950 bg-opacity-60 backdrop-blur-md border-t border-slate-700 drop-shadow-lg" : "hidden h-72 flex flex-col bg-slate-950 bg-opacity-60 backdrop-blur-md border-t border-slate-700 drop-shadow-lg"}>
-                <div className="flex items-center justify-between p-2 bg-slate-900 border-b border-slate-700">
-                  <div
-                    className="cursor-pointer p-2 hover:bg-slate-800 rounded"
-                    onClick={() => setShowTerminal(!showTerminal)}
-                  >
-                    <Image src={TerminalIcon} alt="Collapse" width={20} height={20} />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isPythonProject && (
-                      <button
-                        onClick={runPythonFile}
-                        className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded flex items-center gap-2"
-                      >
-                        <FaPlay size={12} />
-                        Run
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setConfirmSubmit(true)}
-                      className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 rounded flex items-center gap-2"
-                    >
-                      Submit
-              </button>
-                  </div>
-                </div>
-                <div className="relative flex-1">
-                  <div ref={terminalRef} className="absolute p-3 inset-0 w-full h-full overflow-hidden" />
-                </div>
-              </div>
-
-              <div className= {!showTerminal ? "flex items-center justify-between p-2 bg-slate-900 border-t border-slate-700 drop-shadow-lg" : "hidden flex items-center justify-between p-2 bg-transparent border-t border-slate-700 drop-shadow-lg"}>
-                <div
-                  className="cursor-pointer p-2 hover:bg-slate-800 rounded"
-                  onClick={() => setShowTerminal(!showTerminal)}
-                >
-                  <Image src={TerminalIcon} alt="Expand" width={20} height={20} />
-                </div>
-
-                {/* Run button if Python */}
-                <div className="flex items-center gap-2">
-                  {isPythonProject && (
-                    <button
-                      onClick={runPythonFile}
-                      className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded flex items-center gap-2"
-                    >
-                      <FaPlay size={12} />
-                      Run
-                    </button>
-                  )}
-                    <button
-                      onClick={() => setConfirmSubmit(true)}
-                      className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 rounded flex items-center gap-2"
-                    >
-                      Submit
-                    </button>
-                </div>
-              </div>
+          <div
+            className="absolute left-0 right-0 bottom-0 z-30 p-6 bg-slate-950 bg-opacity-60 backdrop-blur-md drop-shadow-lg border-t border-slate-700"
+            style={{ display: showTerminal ? "block" : "none" }}
+          >
+            <div ref={terminalRef} className="overflow-hidden"></div>
+            <div
+              className="absolute top-4 right-4 p-2 rounded-md hover:bg-slate-800 border border-transparent hover:border-slate-700 cursor-pointer"
+              onClick={() => {
+                if (showTerminal) {
+                  setShowTerminal(false);
+                } else {
+                  setShowTerminal(true);
+                }
+              }}
+            >
+              <Image src={ExitIcon} alt="" width={10} height={10}></Image>
+            </div>
           </div>
         </div>
       </div>

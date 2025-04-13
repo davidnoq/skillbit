@@ -11,17 +11,44 @@ import App from "next/app";
 import { render } from "@react-email/render";
 import logo_full_transparent_blue from "/assets/branding/logos/logo_full_transparent_blue.png";
 import { Question } from "@prisma/client";
+import { gradingInsightsGenerator } from "../gradingInsights/gradingInsights";
+
+const {
+  S3Client,
+  DeleteObjectsCommand,
+  GetObjectCommand,
+  ListObjectsV2Command,
+  HeadObjectCommand,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} = require("@aws-sdk/client-s3");
+
+// Initialize an S3 client with provided credentials
+const s3Client = new S3Client({
+  region: process.env.S3_REGION, // Specify the AWS region from environment variables
+  credentials: {
+    accessKeyId: process.env.S3_ACCESSKEYID, // Access key ID from environment variables
+    secretAccessKey: process.env.S3_SECRETACCESSKEY, // Secret access key from environment variables
+  },
+});
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+const baseUrl =
+  process.env.NODE_ENV === "production"
+    ? "https://skillbit.org"
+    : "http://localhost:3000";
 
 export async function addApplicant(
   firstName: string,
   lastName: string,
   email: string,
-  recruiterEmail: string
+  recruiterEmail: string,
+  isSample: boolean = false,
+  jobId?: string // <--- NEW
 ) {
   try {
-    //finding company id from recruiter email
+    // 1) Find the company the recruiter belongs to
     const company = await prisma.user.findUnique({
       where: {
         email: recruiterEmail,
@@ -37,20 +64,30 @@ export async function addApplicant(
 
     if (company && company.employee) {
       const companyId = company.employee.companyID;
-      // Create a new test id record (INSTEAD OF APPLICANT)
+
+      // 2) Create a new testID with optional job connection
       const newApplicant = await prisma.testID.create({
         data: {
           email: email,
           firstName: firstName,
           lastName: lastName,
+          isSample: isSample,
           company: {
             connect: {
               id: companyId,
             },
           },
+          ...(jobId
+            ? {
+                job: {
+                  connect: { id: jobId },
+                },
+              }
+            : {}),
         },
       });
-      return "Success";
+
+      return newApplicant.id;
     } else {
       return null;
     }
@@ -68,7 +105,8 @@ interface Applicant {
 
 export async function addApplicants(
   applicants: Array<Applicant>,
-  recruiterEmail: string
+  recruiterEmail: string,
+  isSample: boolean = false
 ) {
   try {
     //finding company id from recruiter email
@@ -99,6 +137,7 @@ export async function addApplicants(
                 id: companyId,
               },
             },
+            isSample: isSample,
           },
         });
       });
@@ -199,6 +238,13 @@ export async function findQuestions(companyId: string) {
           id: companyId,
         },
       },
+      include: {
+        testIDs: {
+          where: {
+            isSample: true,
+          },
+        },
+      },
     });
     return questions;
   } catch (error) {
@@ -210,8 +256,7 @@ export async function findQuestions(companyId: string) {
 export async function updateQuestion(
   id: string,
   title: string,
-  prompt: string,
-  candidatePrompt: string,
+  prompt: string
 ) {
   try {
     const questions = await prisma.question.update({
@@ -221,7 +266,6 @@ export async function updateQuestion(
       data: {
         title: title,
         prompt: prompt,
-        candidatePrompt: candidatePrompt,
       },
     });
     return "Success";
@@ -626,18 +670,23 @@ export async function userSignIn(email: string, password: string) {
   }
 }
 
-export async function getApplicants(company: string) {
+export async function getApplicants(
+  company: string,
+  isSample: boolean = false
+) {
   try {
     const applicants = await prisma.testID.findMany({
       where: {
         company: {
           id: company,
         },
+        isSample: isSample,
       },
       include: {
         template: true,
       },
     });
+    console.log(applicants);
     return applicants;
   } catch (error) {
     console.error(error);
@@ -691,7 +740,113 @@ export async function markSubmitted(id: string) {
         status: "Submitted",
       },
     });
+
+    //getting files from s3
+
+    // List all objects under the folder (testId)
+    const listParams = {
+      Bucket: "skillbit-inprogress",
+      Prefix: `${id}/`, // Fetch all files under this folder
+    };
+
+    const listCommand = new ListObjectsV2Command(listParams);
+    const listResponse = await s3Client.send(listCommand);
+
+    const filesWithContent = listResponse.Contents
+      ? await Promise.all(
+          listResponse.Contents.map(async (file: any) => {
+            const getCommand = new GetObjectCommand({
+              Bucket: "skillbit-inprogress",
+              Key: file.Key,
+            });
+
+            const response = await s3Client.send(getCommand);
+            const content = await streamToString(response.Body);
+
+            return { fileName: file.Key, content };
+          })
+        )
+      : [];
+
+    const files = filesWithContent;
+
+    //getting instructions from the database
+    const instructions = await getInstructions(id);
+
+    //generating grading insights
+
+    const gradingInsightsData = await gradingInsightsGenerator(
+      files,
+      instructions?.instructions,
+      id
+    );
+
+    console.log("Grading Insights Data:", gradingInsightsData);
+
+    //storing grading insights in the database
+
+    const gradingInsights = await prisma.testID.update({
+      where: {
+        id: id,
+      },
+      data: {
+        gradingInsights: gradingInsightsData,
+        // score: gradingInsightsData.response[0].total_score,
+      },
+    });
+
     return "Success";
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
+export async function updateInstructions(id: string, instructions: string) {
+  try {
+    await prisma.testID.update({
+      where: {
+        id: id,
+      },
+      data: {
+        instructions: instructions,
+      },
+    });
+    return "Success";
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
+export async function getInstructions(id: string) {
+  try {
+    const applicants = await prisma.testID.findUnique({
+      where: {
+        id: id,
+      },
+      select: {
+        instructions: true,
+      },
+    });
+    return applicants;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
+export async function getIsSample(id: string) {
+  try {
+    const applicants = await prisma.testID.findUnique({
+      where: {
+        id: id,
+      },
+      select: {
+        isSample: true,
+      },
+    });
+    return applicants;
   } catch (error) {
     console.error(error);
     return null;
@@ -711,23 +866,54 @@ interface TestIDInterface {
   submitted: boolean;
   template: Question;
   expirationDate: Date;
+  instructions: string;
+}
+
+export async function assignSampleTemplate(
+  applicantData: any,
+  templateID: string
+) {
+  try {
+    const promises = applicantData.map(async (applicant: any) => {
+      await prisma.testID.update({
+        where: {
+          id: applicant.message,
+        },
+        data: {
+          template: {
+            connect: {
+              id: templateID,
+            },
+          },
+        },
+      });
+    });
+    await Promise.all(promises);
+
+    return "Success";
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
 }
 
 export async function assignTemplate(
   applicantData: Array<TestIDInterface>,
   templateID: string,
-  company: string
+  company: string,
+  jobId?: string // <-- NEW: accept jobId
 ) {
   try {
     const template = await prisma.question.findUnique({
-      where: {
-        id: templateID,
-      },
+      where: { id: templateID },
     });
 
-    const expiration = new Date();
+    if (!template) {
+      return null;
+    }
 
-    switch (template?.expiration) {
+    const expiration = new Date();
+    switch (template.expiration) {
       case "1 day":
         expiration.setDate(expiration.getDate() + 1);
         break;
@@ -752,18 +938,15 @@ export async function assignTemplate(
       if (applicant.selected) {
         count++;
         await prisma.testID.update({
-          where: {
-            id: applicant.id,
-          },
+          where: { id: applicant.id },
           data: {
-            template: {
-              connect: {
-                id: templateID,
-              },
-            },
+            template: { connect: { id: templateID } },
             expirationDate: expiration,
+            // NEW: If jobId is provided, connect
+            ...(jobId ? { job: { connect: { id: jobId } } } : {}),
           },
         });
+
         try {
           const emailHtml = `
             <head>
@@ -796,9 +979,7 @@ export async function assignTemplate(
                     <tbody>
                       <tr>
                         <td>
-                          <a href="${
-                            "http://localhost:3000/prescreen/" + applicant.id
-                          }"
+                          <a href="${baseUrl}/prescreen/${applicant.id}"
                              style="background-color:#008cff; border-radius:7px; color:#fff; font-size:16px; text-decoration:none; text-align:center; display:inline-block; margin:10px 0px; padding:12px 24px; line-height:100%; max-width:100%"
                              target="_blank">
                             <span style="max-width:100%; display:inline-block; line-height:120%; mso-padding-alt:0px; mso-text-raise:9px">Get started</span>
@@ -942,4 +1123,69 @@ export async function startTest(testId: string) {
     console.error("Error starting test:", error);
     throw error;
   }
+}
+export async function createJobRecord(companyId: string, name: string) {
+  try {
+    const newJob = await prisma.job.create({
+      data: {
+        name: name,
+        company: {
+          connect: {
+            id: companyId,
+          },
+        },
+      },
+    });
+    return newJob;
+  } catch (error) {
+    console.error("Error creating job:", error);
+    return null;
+  }
+}
+
+export async function getGradingInsights(id: string) {
+  try {
+    const gradingInsights = await prisma.testID.findUnique({
+      where: {
+        id: id,
+      },
+      select: {
+        gradingInsights: true,
+      },
+    });
+    return gradingInsights;
+  } catch (error) {
+    console.error("Error retrieving jobs:", error);
+    return null;
+  }
+}
+
+/**
+ * Retrieve all jobs for a given company.
+ * @param companyId The company's ID
+ * @returns An array of Jobs or null on error
+ */
+export async function getCompanyJobsForCompany(companyId: string) {
+  try {
+    const jobs = await prisma.job.findMany({
+      where: {
+        company: {
+          id: companyId,
+        },
+      },
+    });
+    return jobs;
+  } catch (error) {
+    console.error("Error retrieving jobs:", error);
+    return null;
+  }
+}
+
+// Helper function to convert stream to string
+async function streamToString(stream: any) {
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString("utf-8");
 }
