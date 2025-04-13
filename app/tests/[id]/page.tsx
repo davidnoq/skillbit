@@ -91,6 +91,7 @@ export default function Tests({ params }: { params: { id: string } }) {
   const [instructions, setInstructions] = useState("");
   const [viewFullInstructions, setViewFullInstructions] = useState(false);
   const [isSample, setIsSample] = useState(false);
+  const [confirmSubmit, setConfirmSubmit] = useState(false);
 
   const fetchFilesFromS3 = async () => {
     try {
@@ -727,7 +728,7 @@ export default function Tests({ params }: { params: { id: string } }) {
 
       {!isLoading && timeLeft !== null && (
         <div
-          className={`absolute top-3 right-60 text-xl ${
+          className={`absolute top-3 right-2 text-xl ${
             timeLeft <= 300 ? "text-red-500" : "text-white"
           } bg-black bg-opacity-50 px-3 py-2 rounded-md`}
         >
@@ -857,6 +858,64 @@ export default function Tests({ params }: { params: { id: string } }) {
                       </motion.div>
                     )}
                   </AnimatePresence>
+                  <AnimatePresence>
+                  {confirmSubmit && (
+                    <motion.div
+                      className="fixed inset-0 z-50 flex justify-center items-center
+                                bg-slate-950 bg-opacity-60 p-6 backdrop-blur-sm"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.5, ease: 'backOut' }}
+                    >
+                      <motion.div
+                        className="bg-slate-900 p-6 rounded-xl border border-slate-800
+                                  w-full max-w-md"
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 30 }}
+                        transition={{ duration: 0.5, ease: 'backOut' }}
+                      >
+                        <h1 className="text-xl font-semibold mb-4">Submit your work?</h1>
+                        <p className="mb-6">
+                          Once you confirm, the project will be uploaded and you won’t be able
+                          to make further changes.
+                        </p>
+
+                        <div className="flex flex-col gap-3">
+                          {/* CONFIRM */}
+                          <motion.button
+                            className="w-full bg-slate-800 border border-slate-700 px-6 py-3
+                                      rounded-lg flex justify-center items-center
+                                      transition-colors duration-200"
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 30 }}
+                            onClick={async () => {
+                              setConfirmSubmit(false);   // close modal
+                              await handleSubmit();      // run your existing submit logic
+                            }}
+                          >
+                            Yes, submit
+                          </motion.button>
+
+                          {/* CANCEL */}
+                          <motion.button
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 px-6 py-3
+                                      rounded-lg flex justify-center items-center
+                                      hover:bg-slate-700 transition-colors duration-200"
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 30 }}
+                            onClick={() => setConfirmSubmit(false)}
+                          >
+                            Cancel
+                          </motion.button>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 </ul>
                 <ul className="list-none text-white flex flex-col gap-1 bg-slate-800 border-slate-700 border p-3 rounded-lg mt-3">
                   <div className="flex justify-between items-center">
@@ -928,14 +987,6 @@ export default function Tests({ params }: { params: { id: string } }) {
             <h1 className="text-white text-2xl">Skillbit</h1>
           </div>
           <div className="flex-1 flex justify-end items-center gap-2">
-            {!isSample && (
-              <button
-                onClick={handleSubmit}
-                className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 rounded flex items-center gap-2"
-              >
-                Submit
-              </button>
-            )}
             {!isPythonProject && (
               <>
                 <div
@@ -1022,6 +1073,12 @@ export default function Tests({ params }: { params: { id: string } }) {
                         Run
                       </button>
                     )}
+                    <button
+                      onClick={() => setConfirmSubmit(true)}
+                      className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 rounded flex items-center gap-2"
+                    >
+                      Submit
+              </button>
                   </div>
                 </div>
                 <div className="relative flex-1">
@@ -1048,6 +1105,12 @@ export default function Tests({ params }: { params: { id: string } }) {
                       Run
                     </button>
                   )}
+                    <button
+                      onClick={() => setConfirmSubmit(true)}
+                      className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 rounded flex items-center gap-2"
+                    >
+                      Submit
+                    </button>
                 </div>
               </div>
           </div>
